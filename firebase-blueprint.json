@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile in the platform",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "avatar": { "type": "string" },
+        "role": { "type": "string" },
+        "registeredAt": { "type": "string" },
+        "lastActive": { "type": "string" }
+      },
+      "required": ["uid", "email", "name"]
+    },
+    "TestModule": {
+      "title": "TestModule",
+      "description": "Test module containing questions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "level": { "type": "string" },
+        "questions": { "type": "array" }
+      },
+      "required": ["id", "title"]
+    },
+    "UserAttempt": {
+      "title": "UserAttempt",
+      "description": "Exam result attempt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "testId": { "type": "string" },
+        "testTitle": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["userId", "testId", "score"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User account profiles"
+    },
+    "/testModules/{moduleId}": {
+      "schema": { "$ref": "#/entities/TestModule" },
+      "description": "Exam modules"
+    },
+    "/attempts/{attemptId}": {
+      "schema": { "$ref": "#/entities/UserAttempt" },
+      "description": "User test attempts"
+    }
+  }
+}

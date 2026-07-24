@@ -1,0 +1,658 @@
+import React, { useState } from 'react';
+import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile } from '../types';
+import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles } from 'lucide-react';
+
+interface Props {
+  modules: TestModule[];
+  currentUser: UserProfile | null;
+  onSaveAttempt: (testId: string, testTitle: string, score: number, total: number) => void;
+}
+
+export const TestRunner: React.FC<Props> = ({
+  modules,
+  currentUser,
+  onSaveAttempt,
+}) => {
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [activeModule, setActiveModule] = useState<TestModule | null>(null);
+  const [currentQIndex, setCurrentQIndex] = useState<number>(0);
+  const [answers, setAnswers] = useState<Record<number, any>>({});
+  const [lang, setLang] = useState<'uz' | 'en'>('uz');
+  const [isFinished, setIsFinished] = useState<boolean>(false);
+
+  // Filter modules by level
+  const filteredModules = selectedLevel === 'all'
+    ? modules
+    : modules.filter((m) => m.level.toLowerCase() === selectedLevel.toLowerCase());
+
+  const startTest = (module: TestModule) => {
+    setActiveModule(module);
+    setCurrentQIndex(0);
+    setAnswers({});
+    setIsFinished(false);
+  };
+
+  const handleSingleSelect = (qIndex: number, optIndex: number) => {
+    setAnswers((prev) => ({ ...prev, [qIndex]: optIndex }));
+  };
+
+  const handleMultiSelect = (qIndex: number, optIndex: number) => {
+    setAnswers((prev) => {
+      const currentList: number[] = prev[qIndex] || [];
+      const updated = currentList.includes(optIndex)
+        ? currentList.filter((i) => i !== optIndex)
+        : [...currentList, optIndex];
+      return { ...prev, [qIndex]: updated };
+    });
+  };
+
+  const handleYNSelect = (qIndex: number, itemIndex: number, choice: boolean) => {
+    setAnswers((prev) => {
+      const currentObj: Record<number, boolean> = prev[qIndex] || {};
+      return {
+        ...prev,
+        [qIndex]: { ...currentObj, [itemIndex]: choice },
+      };
+    });
+  };
+
+  const handleMatchSelect = (qIndex: number, pairIndex: number, selectedDef: string) => {
+    setAnswers((prev) => {
+      const currentObj: Record<number, string> = prev[qIndex] || {};
+      return {
+        ...prev,
+        [qIndex]: { ...currentObj, [pairIndex]: selectedDef },
+      };
+    });
+  };
+
+  const handleOrderMove = (qIndex: number, fromIndex: number, direction: 'up' | 'down', defaultSteps: OrderStep[]) => {
+    setAnswers((prev) => {
+      const currentOrder: OrderStep[] = prev[qIndex]
+        ? [...prev[qIndex]]
+        : [...defaultSteps];
+      
+      const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+      if (toIndex < 0 || toIndex >= currentOrder.length) return prev;
+
+      const temp = currentOrder[fromIndex];
+      currentOrder[fromIndex] = currentOrder[toIndex];
+      currentOrder[toIndex] = temp;
+
+      return { ...prev, [qIndex]: currentOrder };
+    });
+  };
+
+  // Evaluate single question score
+  const isQuestionCorrect = (q: Question, qIndex: number): boolean => {
+    const userAns = answers[qIndex];
+    if (userAns === undefined) return false;
+
+    if (q.type === 'single') {
+      const opts = q.opts || [];
+      const correctIndex = opts.findIndex((o) => o.ok);
+      return userAns === correctIndex;
+    }
+
+    if (q.type === 'multi') {
+      const opts = q.opts || [];
+      const correctIndices = opts
+        .map((o, idx) => (o.ok ? idx : -1))
+        .filter((idx) => idx !== -1);
+      
+      const userIndices: number[] = userAns || [];
+      if (userIndices.length !== correctIndices.length) return false;
+      return correctIndices.every((idx) => userIndices.includes(idx));
+    }
+
+    if (q.type === 'yn') {
+      const ynList = q.yn || [];
+      const userYNObj: Record<number, boolean> = userAns || {};
+      return ynList.every((item, idx) => userYNObj[idx] === item.ok);
+    }
+
+    if (q.type === 'match') {
+      const pairs = q.pairs || [];
+      const userMatchObj: Record<number, string> = userAns || {};
+      return pairs.every((pair, idx) => {
+        const val = userMatchObj[idx];
+        return val === (lang === 'uz' ? pair.uz : pair.en);
+      });
+    }
+
+    if (q.type === 'order') {
+      const defaultSteps = q.steps || [];
+      const userOrder: OrderStep[] = userAns || defaultSteps;
+      return defaultSteps.every((step, idx) => {
+        const userStep = userOrder[idx];
+        return userStep && userStep.en === step.en;
+      });
+    }
+
+    return false;
+  };
+
+  const calculateTotalScore = () => {
+    if (!activeModule) return { score: 0, total: 0, percent: 0 };
+    let score = 0;
+    activeModule.questions.forEach((q, idx) => {
+      if (isQuestionCorrect(q, idx)) score++;
+    });
+    const total = activeModule.questions.length;
+    const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+    return { score, total, percent };
+  };
+
+  const finishTest = () => {
+    if (!activeModule) return;
+    const { score, total } = calculateTotalScore();
+    setIsFinished(true);
+    onSaveAttempt(activeModule.id, activeModule.title, score, total);
+  };
+
+  // View: Test Selection Hub
+  if (!activeModule) {
+    return (
+      <div className="wrap">
+        {/* Hero Section */}
+        <div className="hero">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-indigo-500/30 text-indigo-100 font-semibold px-3 py-1 rounded-full text-xs mb-3 border border-indigo-400/30">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" /> IC3 GS6 Raqamli Savodxonlik
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+                Raqamli Ko'nikmalar Imtihon Portaliga Xush Kelibsiz
+              </h1>
+              <p className="text-indigo-100/90 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
+                Global standartlarga mos IC3 GS6 test savollarini o'zbek va ingliz tillarida yechib, bilimingizni sinab ko'ring va natijalaringizni kuzatib boring.
+              </p>
+            </div>
+
+            {/* Language Switcher */}
+            <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 flex items-center gap-1 self-stretch md:self-auto justify-center">
+              <button
+                onClick={() => setLang('uz')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  lang === 'uz' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
+                }`}
+              >
+                🇺🇿 O'zbekcha
+              </button>
+              <button
+                onClick={() => setLang('en')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  lang === 'en' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
+                }`}
+              >
+                🇬🇧 English
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Level Filters */}
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+          <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-gray-200 shadow-xs">
+            <button
+              onClick={() => setSelectedLevel('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                selectedLevel === 'all'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Barcha Testlar ({modules.length})
+            </button>
+            <button
+              onClick={() => setSelectedLevel('level 1')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                selectedLevel === 'level 1'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              1-Modul (Boshlang'ich)
+            </button>
+            <button
+              onClick={() => setSelectedLevel('level 2')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                selectedLevel === 'level 2'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              2-Modul (O'rta)
+            </button>
+            <button
+              onClick={() => setSelectedLevel('level 3')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                selectedLevel === 'level 3'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              3-Modul (Yuqori)
+            </button>
+          </div>
+        </div>
+
+        {/* Test Cards Grid */}
+        {filteredModules.length === 0 ? (
+          <div className="bg-white rounded-3xl p-12 text-center border border-gray-200 shadow-sm max-w-xl mx-auto my-8">
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <HelpCircle className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Hozircha testlar mavjud emas</h3>
+            <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+              Platformada test modullari hali yuklanmagan. Admin panel orqali PDF fayldan yangi testlarni AI Wizard yordamida yuklashingiz mumkin.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredModules.map((m) => (
+              <div
+                key={m.id}
+                onClick={() => startTest(m)}
+                className="tcard group hover:border-indigo-500"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100">
+                      {m.level}
+                    </span>
+                    <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                      <HelpCircle className="w-3.5 h-3.5" /> {m.questions.length} ta savol
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition">
+                    {m.title}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    IC3 GS6 standartlari bo'yicha tayyorlangan amaliy va nazariy savollar to'plami.
+                  </p>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition flex items-center gap-1">
+                    Testni boshlash <ArrowRight className="w-4 h-4" />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // View: Test Results Screen
+  if (isFinished) {
+    const { score, total, percent } = calculateTotalScore();
+    const isPassed = percent >= 70;
+
+    return (
+      <div className="wrap max-w-3xl animate-fade-in">
+        <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl text-center mb-8">
+          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
+            isPassed ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+          }`}>
+            <Award className="w-10 h-10" />
+          </div>
+
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            {isPassed ? "Tabriklaymiz! Test Muvaffaqiyatli Topshirildi 🎉" : "Kechirasiz, Natija Etarli Emas"}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            {activeModule.title} — Imtihon natijalari
+          </p>
+
+          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto my-6 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+            <div>
+              <div className="text-2xl font-black text-gray-900">{score}/{total}</div>
+              <div className="text-xs text-gray-500 font-medium">To'g'ri javoblar</div>
+            </div>
+            <div>
+              <div className={`text-2xl font-black ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {percent}%
+              </div>
+              <div className="text-xs text-gray-500 font-medium">Foiz darajasi</div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-indigo-600">
+                {isPassed ? "O'TDI" : "YIQILDI"}
+              </div>
+              <div className="text-xs text-gray-500 font-medium">Status</div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => startTest(activeModule)}
+              className="btn btn-primary py-2.5 px-6 text-sm"
+            >
+              <RotateCcw className="w-4 h-4" /> Qayta topshirish
+            </button>
+            <button
+              onClick={() => setActiveModule(null)}
+              className="btn btn-secondary py-2.5 px-6 text-sm"
+            >
+              Testlar ro'yxatiga qaytish
+            </button>
+          </div>
+        </div>
+
+        {/* Detailed Question Review */}
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          Savollar va Natijalar Tahlili:
+        </h3>
+
+        <div className="space-y-6">
+          {activeModule.questions.map((q, qIdx) => {
+            const correct = isQuestionCorrect(q, qIdx);
+            return (
+              <div
+                key={qIdx}
+                className={`qcard border-2 ${
+                  correct ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg">
+                      #{qIdx + 1}
+                    </span>
+                    <span className="text-xs uppercase font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                      {q.type}
+                    </span>
+                  </div>
+                  {correct ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> To'g'ri
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold bg-rose-100 text-rose-800 px-3 py-1 rounded-full">
+                      <XCircle className="w-4 h-4 text-rose-600" /> Noto'g'ri
+                    </span>
+                  )}
+                </div>
+
+                <p className="font-bold text-gray-900 text-base mb-1">
+                  {lang === 'uz' ? q.quz : q.qen}
+                </p>
+                <p className="text-xs text-gray-500 italic mb-4">
+                  {lang === 'uz' ? q.qen : q.quz}
+                </p>
+
+                {/* Show Options according to question type */}
+                {q.type === 'single' || q.type === 'multi' ? (
+                  <div className="space-y-2">
+                    {q.opts?.map((opt, optIdx) => (
+                      <div
+                        key={optIdx}
+                        className={`p-3 rounded-xl text-sm border font-medium flex items-center justify-between ${
+                          opt.ok
+                            ? 'bg-emerald-100/70 border-emerald-300 text-emerald-900 font-bold'
+                            : answers[qIdx] === optIdx || (Array.isArray(answers[qIdx]) && answers[qIdx].includes(optIdx))
+                            ? 'bg-rose-100/70 border-rose-300 text-rose-900'
+                            : 'bg-white border-gray-200 text-gray-700'
+                        }`}
+                      >
+                        <span>{lang === 'uz' ? opt.uz : opt.en}</span>
+                        {opt.ok && <Check className="w-4 h-4 text-emerald-700 font-bold" />}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // View: Active Question Runner
+  const currentQ = activeModule.questions[currentQIndex];
+  const isLastQuestion = currentQIndex === activeModule.questions.length - 1;
+
+  return (
+    <div className="wrap max-w-3xl animate-fade-in">
+      {/* Top Runner Navigation Bar */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-200 mb-6 shadow-xs">
+        <button
+          onClick={() => setActiveModule(null)}
+          className="text-xs font-semibold text-gray-500 hover:text-gray-900 flex items-center gap-1"
+        >
+          <ArrowLeft className="w-4 h-4" /> Chiqish
+        </button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-gray-900">
+            Savol {currentQIndex + 1} / {activeModule.questions.length}
+          </span>
+          <div className="w-32 bg-gray-200 h-2 rounded-full overflow-hidden">
+            <div
+              className="bg-indigo-600 h-full transition-all duration-300"
+              style={{
+                width: `${((currentQIndex + 1) / activeModule.questions.length) * 100}%`,
+              }}
+            ></div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setLang(lang === 'uz' ? 'en' : 'uz')}
+          className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition"
+        >
+          🌐 {lang === 'uz' ? "O'zbekcha" : "English"}
+        </button>
+      </div>
+
+      {/* Main Question Card */}
+      <div className="qcard shadow-md">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+            {currentQ.type === 'single' && "Bitta to'g'ri javobni tanlang"}
+            {currentQ.type === 'multi' && `Bir nechta to'g'ri javobni tanlang (${currentQ.need || 2} ta)`}
+            {currentQ.type === 'yn' && "Ha / Yo'q (To'g'ri / Noto'g'ri) baholang"}
+            {currentQ.type === 'match' && "Tushunchalar va ta'riflarni moslang"}
+            {currentQ.type === 'order' && "Bosqichlarni to'g'ri ketma-ketlikda joylashtiring"}
+          </span>
+        </div>
+
+        <h2 className="text-xl font-extrabold text-gray-900 mb-2 leading-snug">
+          {lang === 'uz' ? currentQ.quz : currentQ.qen}
+        </h2>
+        <p className="text-xs text-gray-400 italic mb-6">
+          {lang === 'uz' ? currentQ.qen : currentQ.quz}
+        </p>
+
+        {/* QUESTION TYPE: SINGLE */}
+        {currentQ.type === 'single' && (
+          <div className="space-y-3">
+            {currentQ.opts?.map((opt, optIdx) => {
+              const isSelected = answers[currentQIndex] === optIdx;
+              return (
+                <div
+                  key={optIdx}
+                  onClick={() => handleSingleSelect(currentQIndex, optIdx)}
+                  className={`opt ${isSelected ? 'selected' : ''}`}
+                >
+                  <span className="font-medium text-sm">
+                    {lang === 'uz' ? opt.uz : opt.en}
+                  </span>
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300'
+                    }`}
+                  >
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* QUESTION TYPE: MULTI */}
+        {currentQ.type === 'multi' && (
+          <div className="space-y-3">
+            {currentQ.opts?.map((opt, optIdx) => {
+              const currentList: number[] = answers[currentQIndex] || [];
+              const isSelected = currentList.includes(optIdx);
+              return (
+                <div
+                  key={optIdx}
+                  onClick={() => handleMultiSelect(currentQIndex, optIdx)}
+                  className={`opt ${isSelected ? 'selected' : ''}`}
+                >
+                  <span className="font-medium text-sm">
+                    {lang === 'uz' ? opt.uz : opt.en}
+                  </span>
+                  <div
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+                      isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3.5 h-3.5" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* QUESTION TYPE: YN */}
+        {currentQ.type === 'yn' && (
+          <div className="space-y-3">
+            {currentQ.yn?.map((item, itemIdx) => {
+              const userObj = answers[currentQIndex] || {};
+              const selectedValue = userObj[itemIdx];
+              return (
+                <div key={itemIdx} className="ynrow">
+                  <span className="font-medium text-sm text-gray-800 flex-1">
+                    {lang === 'uz' ? item.uz : item.en}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleYNSelect(currentQIndex, itemIdx, true)}
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold transition border ${
+                        selectedValue === true
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:bg-emerald-50'
+                      }`}
+                    >
+                      HA
+                    </button>
+                    <button
+                      onClick={() => handleYNSelect(currentQIndex, itemIdx, false)}
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold transition border ${
+                        selectedValue === false
+                          ? 'bg-rose-600 text-white border-rose-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:bg-rose-50'
+                      }`}
+                    >
+                      YO'Q
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* QUESTION TYPE: MATCH */}
+        {currentQ.type === 'match' && (
+          <div className="space-y-4">
+            {currentQ.pairs?.map((pair, pairIdx) => {
+              const userObj = answers[currentQIndex] || {};
+              const allDefs = currentQ.pairs?.map((p) => (lang === 'uz' ? p.uz : p.en)) || [];
+              return (
+                <div key={pairIdx} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  <div className="mterm">
+                    {pair.t}
+                  </div>
+                  <select
+                    value={userObj[pairIdx] || ''}
+                    onChange={(e) => handleMatchSelect(currentQIndex, pairIdx, e.target.value)}
+                    className="w-full p-3 border-1.5 border-gray-300 rounded-xl text-sm font-medium focus:border-indigo-600 focus:outline-none bg-white"
+                  >
+                    <option value="">-- Ta'rifni tanlang --</option>
+                    {allDefs.map((defText, dIdx) => (
+                      <option key={dIdx} value={defText}>
+                        {defText}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* QUESTION TYPE: ORDER */}
+        {currentQ.type === 'order' && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 mb-2 font-medium">
+              Tugmachalar yordamida qadamlarni to'g'ri ketma-ketlikka keltiring:
+            </p>
+            {(answers[currentQIndex] || currentQ.steps || []).map((step: OrderStep, stepIdx: number) => (
+              <div key={stepIdx} className="ostep">
+                <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
+                  {stepIdx + 1}
+                </span>
+                <span className="flex-1 font-medium text-sm text-gray-800">
+                  {lang === 'uz' ? step.uz : step.en}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    disabled={stepIdx === 0}
+                    onClick={() => handleOrderMove(currentQIndex, stepIdx, 'up', currentQ.steps || [])}
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    disabled={stepIdx === (answers[currentQIndex] || currentQ.steps || []).length - 1}
+                    onClick={() => handleOrderMove(currentQIndex, stepIdx, 'down', currentQ.steps || [])}
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30"
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Navigation Controls */}
+        <div className="navrow">
+          <button
+            disabled={currentQIndex === 0}
+            onClick={() => setCurrentQIndex((prev) => prev - 1)}
+            className="btn btn-secondary text-sm disabled:opacity-30"
+          >
+            <ArrowLeft className="w-4 h-4" /> Oldingisi
+          </button>
+
+          {isLastQuestion ? (
+            <button
+              onClick={finishTest}
+              className="btn btn-success text-sm py-2.5 px-6 shadow-md"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Testni Yakunlash
+            </button>
+          ) : (
+            <button
+              onClick={() => setCurrentQIndex((prev) => prev + 1)}
+              className="btn btn-primary text-sm py-2.5 px-6"
+            >
+              Keyingisi <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

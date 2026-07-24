@@ -1,0 +1,6 @@
+{
+  "name": "IC3 GS6 Test & Admin",
+  "description": "IC3 GS6 Digital Literacy certification test practice application with Google Authentication and AI-powered question parsing for administrators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
