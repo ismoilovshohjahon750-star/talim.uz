@@ -87,7 +87,17 @@ export function App() {
       (snapshot) => {
         const loadedModules: TestModule[] = [];
         snapshot.forEach((d) => {
-          loadedModules.push({ id: d.id, ...d.data() } as TestModule);
+          const data = d.data();
+          loadedModules.push({
+            id: d.id,
+            title: data.title || 'Untitled Test',
+            level: data.level || 'Level 1',
+            isPaid: data.isPaid || false,
+            price: data.price,
+            subject: data.subject || 'Biologiya',
+            ...data,
+            questions: Array.isArray(data.questions) ? data.questions : [],
+          } as TestModule);
         });
         setModules(loadedModules);
       },

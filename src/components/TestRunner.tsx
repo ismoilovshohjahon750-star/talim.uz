@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile, isAdminEmail, getNormalizedSubject } from '../types';
-import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers, ChevronLeft, ChevronRight, Dna, Laptop, Zap, FlaskConical, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
   modules: TestModule[];
@@ -188,10 +188,11 @@ export const TestRunner: React.FC<Props> = ({
   const calculateTotalScore = () => {
     if (!activeModule) return { score: 0, total: 0, percent: 0 };
     let score = 0;
-    activeModule.questions.forEach((q, idx) => {
+    const questions = activeModule.questions || [];
+    questions.forEach((q, idx) => {
       if (isQuestionCorrect(q, idx)) score++;
     });
-    const total = activeModule.questions.length;
+    const total = questions.length;
     const percent = total > 0 ? Math.round((score / total) * 100) : 0;
     return { score, total, percent };
   };
@@ -230,7 +231,7 @@ export const TestRunner: React.FC<Props> = ({
                   lang === 'uz' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
                 }`}
               >
-                🇺🇿 O'zbekcha
+                <Globe className="w-3.5 h-3.5" /> O'zbekcha
               </button>
               <button
                 onClick={() => setLang('en')}
@@ -238,7 +239,7 @@ export const TestRunner: React.FC<Props> = ({
                   lang === 'en' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
                 }`}
               >
-                🇬🇧 English
+                <Globe className="w-3.5 h-3.5" /> English
               </button>
             </div>
           </div>
@@ -303,7 +304,19 @@ export const TestRunner: React.FC<Props> = ({
                           : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span>{sub === 'Biologiya' ? '🧬' : sub.includes('Informatika') ? '💻' : sub === 'Fizika' ? '⚡' : sub === 'Kimyo' ? '🧪' : '📚'}</span>
+                      <span>
+                        {sub === 'Biologiya' ? (
+                          <Dna className="w-3.5 h-3.5" />
+                        ) : sub.includes('Informatika') ? (
+                          <Laptop className="w-3.5 h-3.5" />
+                        ) : sub === 'Fizika' ? (
+                          <Zap className="w-3.5 h-3.5" />
+                        ) : sub === 'Kimyo' ? (
+                          <FlaskConical className="w-3.5 h-3.5" />
+                        ) : (
+                          <BookOpen className="w-3.5 h-3.5" />
+                        )}
+                      </span>
                       <span>{sub}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] ${
                         selectedSubject.toLowerCase() === sub.toLowerCase() ? 'bg-indigo-800 text-indigo-100' : 'bg-gray-100 text-gray-600'
@@ -393,7 +406,19 @@ export const TestRunner: React.FC<Props> = ({
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-lg shadow-2xs flex items-center gap-1">
-                          <span>{subjectName === 'Biologiya' ? '🧬' : '📚'}</span> {subjectName}
+                          <span>
+                            {subjectName === 'Biologiya' ? (
+                              <Dna className="w-3.5 h-3.5" />
+                            ) : subjectName.includes('Informatika') ? (
+                              <Laptop className="w-3.5 h-3.5" />
+                            ) : subjectName === 'Fizika' ? (
+                              <Zap className="w-3.5 h-3.5" />
+                            ) : subjectName === 'Kimyo' ? (
+                              <FlaskConical className="w-3.5 h-3.5" />
+                            ) : (
+                              <BookOpen className="w-3.5 h-3.5" />
+                            )}
+                          </span> {subjectName}
                         </span>
                         <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-100">
                           {m.level}
@@ -421,7 +446,7 @@ export const TestRunner: React.FC<Props> = ({
                       {m.title}
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      IC3 GS6 standartlari bo'yicha tayyorlangan {m.questions.length} ta amaliy va nazariy savollar to'plami.
+                      IC3 GS6 standartlari bo'yicha tayyorlangan {(m.questions || []).length} ta amaliy va nazariy savollar to'plami.
                     </p>
                   </div>
 
@@ -437,7 +462,7 @@ export const TestRunner: React.FC<Props> = ({
                     )}
 
                     <span className="text-[11px] text-gray-400 font-semibold">
-                      {m.questions.length} ta savol
+                      {(m.questions || []).length} ta savol
                     </span>
                   </div>
                 </div>
@@ -455,8 +480,8 @@ export const TestRunner: React.FC<Props> = ({
               </div>
 
               <div className="text-center mb-6">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
-                  ⭐ Premium Test Moduli
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-200 inline-flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" /> Premium Test Moduli
                 </span>
                 <h3 className="text-xl font-extrabold text-gray-900 mt-2">
                   {paymentModalModule.title}
@@ -542,8 +567,9 @@ export const TestRunner: React.FC<Props> = ({
             <Award className="w-10 h-10" />
           </div>
 
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            {isPassed ? "Tabriklaymiz! Test Muvaffaqiyatli Topshirildi 🎉" : "Kechirasiz, Natija Etarli Emas"}
+          <h2 className="text-3xl font-extrabold text-gray-900 inline-flex items-center justify-center gap-2 flex-wrap">
+            <span>{isPassed ? "Tabriklaymiz! Test Muvaffaqiyatli Topshirildi" : "Kechirasiz, Natija Etarli Emas"}</span>
+            {isPassed && <Sparkles className="w-7 h-7 text-amber-500 inline" />}
           </h2>
           <p className="text-sm text-gray-500 mt-1">
             {activeModule.title} — Imtihon natijalari
@@ -590,7 +616,7 @@ export const TestRunner: React.FC<Props> = ({
         </h3>
 
         <div className="space-y-6">
-          {activeModule.questions.map((q, qIdx) => {
+          {(activeModule.questions || []).map((q, qIdx) => {
             const correct = isQuestionCorrect(q, qIdx);
             return (
               <div
@@ -655,8 +681,9 @@ export const TestRunner: React.FC<Props> = ({
   }
 
   // View: Active Question Runner
-  const currentQ = activeModule.questions[currentQIndex];
-  const isLastQuestion = currentQIndex === activeModule.questions.length - 1;
+  const questionsList = activeModule.questions || [];
+  const currentQ = questionsList[currentQIndex] || { type: 'single', quz: '', qen: '', opts: [] };
+  const isLastQuestion = questionsList.length > 0 ? currentQIndex === questionsList.length - 1 : true;
 
   return (
     <div className="wrap max-w-3xl animate-fade-in">
@@ -671,13 +698,13 @@ export const TestRunner: React.FC<Props> = ({
 
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-gray-900">
-            Savol {currentQIndex + 1} / {activeModule.questions.length}
+            Savol {currentQIndex + 1} / {questionsList.length}
           </span>
           <div className="w-32 bg-gray-200 h-2 rounded-full overflow-hidden">
             <div
               className="bg-indigo-600 h-full transition-all duration-300"
               style={{
-                width: `${((currentQIndex + 1) / activeModule.questions.length) * 100}%`,
+                width: `${((currentQIndex + 1) / (questionsList.length || 1)) * 100}%`,
               }}
             ></div>
           </div>
@@ -685,9 +712,10 @@ export const TestRunner: React.FC<Props> = ({
 
         <button
           onClick={() => setLang(lang === 'uz' ? 'en' : 'uz')}
-          className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition"
+          className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition inline-flex items-center gap-1.5"
         >
-          🌐 {lang === 'uz' ? "O'zbekcha" : "English"}
+          <Globe className="w-3.5 h-3.5 text-indigo-600" />
+          <span>{lang === 'uz' ? "O'zbekcha" : "English"}</span>
         </button>
       </div>
 
@@ -851,16 +879,18 @@ export const TestRunner: React.FC<Props> = ({
                   <button
                     disabled={stepIdx === 0}
                     onClick={() => handleOrderMove(currentQIndex, stepIdx, 'up', currentQ.steps || [])}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30"
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30 flex items-center justify-center"
+                    title="Yuqoriga ko'chirish"
                   >
-                    ▲
+                    <ChevronUp className="w-4 h-4" />
                   </button>
                   <button
                     disabled={stepIdx === (answers[currentQIndex] || currentQ.steps || []).length - 1}
                     onClick={() => handleOrderMove(currentQIndex, stepIdx, 'down', currentQ.steps || [])}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30"
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30 flex items-center justify-center"
+                    title="Pastga ko'chirish"
                   >
-                    ▼
+                    <ChevronDown className="w-4 h-4" />
                   </button>
                 </div>
               </div>

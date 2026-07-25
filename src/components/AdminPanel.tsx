@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TestModule, UserProfile, UserAttempt, Question, isAdminEmail, getNormalizedSubject } from '../types';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Users, FileText, PlusCircle, Upload, Sparkles, CheckCircle, Trash2, ChevronRight, ShieldAlert, FileType, Check, ArrowRight, RefreshCw, Eye, DollarSign, Lock, Unlock, Tag, Edit3, Save } from 'lucide-react';
+import { Users, FileText, PlusCircle, Upload, Sparkles, CheckCircle, Trash2, ChevronRight, ShieldAlert, FileType, Check, ArrowRight, RefreshCw, Eye, DollarSign, Lock, Unlock, Tag, Edit3, Save, Dna, Laptop, Zap, FlaskConical, BookOpen } from 'lucide-react';
 
 interface Props {
   currentUser: UserProfile | null;
@@ -335,7 +335,19 @@ export const AdminPanel: React.FC<Props> = ({
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-lg shadow-2xs flex items-center gap-1">
-                          <span>{getNormalizedSubject(m) === 'Biologiya' ? '🧬' : '📚'}</span> {getNormalizedSubject(m)}
+                          <span>
+                            {getNormalizedSubject(m) === 'Biologiya' ? (
+                              <Dna className="w-3.5 h-3.5" />
+                            ) : getNormalizedSubject(m).includes('Informatika') ? (
+                              <Laptop className="w-3.5 h-3.5" />
+                            ) : getNormalizedSubject(m) === 'Fizika' ? (
+                              <Zap className="w-3.5 h-3.5" />
+                            ) : getNormalizedSubject(m) === 'Kimyo' ? (
+                              <FlaskConical className="w-3.5 h-3.5" />
+                            ) : (
+                              <BookOpen className="w-3.5 h-3.5" />
+                            )}
+                          </span> {getNormalizedSubject(m)}
                         </span>
                         <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-100">
                           {m.level}
@@ -351,7 +363,7 @@ export const AdminPanel: React.FC<Props> = ({
                         )}
                       </div>
                       <span className="text-xs text-gray-500 font-semibold">
-                        {m.questions.length} ta savol
+                        {(m.questions || []).length} ta savol
                       </span>
                     </div>
 
@@ -493,7 +505,7 @@ export const AdminPanel: React.FC<Props> = ({
               </div>
 
               <div className="space-y-4 max-h-[550px] overflow-y-auto pr-2">
-                {selectedModuleView.questions.map((q, idx) => (
+                {(selectedModuleView.questions || []).map((q, idx) => (
                   <div key={idx} className="p-4 bg-gray-50/80 rounded-2xl border border-gray-200 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -626,7 +638,17 @@ export const AdminPanel: React.FC<Props> = ({
                           : 'border-gray-200 hover:border-gray-300 text-gray-600'
                       }`}
                     >
-                      <span>{sub === 'Biologiya' ? '🧬' : sub.includes('Informatika') ? '💻' : sub === 'Fizika' ? '⚡' : '🧪'}</span>
+                      <span>
+                        {sub === 'Biologiya' ? (
+                          <Dna className="w-3.5 h-3.5 text-indigo-600" />
+                        ) : sub.includes('Informatika') ? (
+                          <Laptop className="w-3.5 h-3.5 text-indigo-600" />
+                        ) : sub === 'Fizika' ? (
+                          <Zap className="w-3.5 h-3.5 text-indigo-600" />
+                        ) : (
+                          <FlaskConical className="w-3.5 h-3.5 text-indigo-600" />
+                        )}
+                      </span>
                       <span>{sub}</span>
                     </button>
                   ))}
@@ -821,11 +843,12 @@ export const AdminPanel: React.FC<Props> = ({
               </div>
 
               <div>
-                <h2 className="text-2xl font-black text-gray-900">
-                  AI Tahlili Muvaffaqiyatli Yakunlandi! 🎉
+                <h2 className="text-2xl font-black text-gray-900 inline-flex items-center justify-center gap-2">
+                  <span>AI Tahlili Muvaffaqiyatli Yakunlandi!</span>
+                  <Sparkles className="w-6 h-6 text-amber-500" />
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  PDF tahlil qilindi, Kalitlar jadvali moslashtirildi va <strong>{extractedModule.questions.length} ta savol</strong> avtomattik ravishda bazaga saqlandi va talabalar uchun tayyorlandi!
+                  PDF tahlil qilindi, Kalitlar jadvali moslashtirildi va <strong>{(extractedModule.questions || []).length} ta savol</strong> avtomattik ravishda bazaga saqlandi va talabalar uchun tayyorlandi!
                 </p>
               </div>
 
@@ -834,7 +857,7 @@ export const AdminPanel: React.FC<Props> = ({
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                   Ajratalgan savollar namunasi:
                 </div>
-                {extractedModule.questions.map((q, qIdx) => (
+                {(extractedModule.questions || []).map((q, qIdx) => (
                   <div key={qIdx} className="p-2.5 bg-white rounded-xl border text-xs">
                     <span className="font-bold text-gray-900">#{qIdx + 1}. {q.quz}</span>
                     <span className="ml-2 text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded">
