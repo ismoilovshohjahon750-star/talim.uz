@@ -1,3 +1,13 @@
+export const ADMIN_EMAILS = [
+  'ismoilovshohjahon750@gmail.com',
+  'ranvar611@gmail.com',
+];
+
+export function isAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
 export type QuestionType = 'single' | 'multi' | 'yn' | 'match' | 'order';
 
 export interface QuestionOption {

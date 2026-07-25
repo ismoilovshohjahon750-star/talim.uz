@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TestModule, UserProfile, UserAttempt, Question } from '../types';
+import { TestModule, UserProfile, UserAttempt, Question, isAdminEmail } from '../types';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Users, FileText, PlusCircle, Upload, Sparkles, CheckCircle, Trash2, ChevronRight, ShieldAlert, FileType, Check, ArrowRight, RefreshCw, Eye } from 'lucide-react';
@@ -19,7 +19,7 @@ export const AdminPanel: React.FC<Props> = ({
   attempts,
   onRefreshData,
 }) => {
-  const isAdmin = currentUser?.email.toLowerCase() === 'ismoilovshohjahon750@gmail.com';
+  const isAdmin = currentUser?.role === 'admin' || isAdminEmail(currentUser?.email);
 
   const [activeTab, setActiveTab] = useState<'users' | 'questions' | 'wizard'>('users');
 
@@ -42,7 +42,7 @@ export const AdminPanel: React.FC<Props> = ({
           <ShieldAlert className="w-16 h-16 text-rose-600 mx-auto mb-4" />
           <h2 className="text-2xl font-black text-rose-900 mb-2">Ruxsat Etilmadi</h2>
           <p className="text-sm text-rose-700 leading-relaxed">
-            Admin panelga faqat biriktirilgan maxsus administrator (<strong>ismoilovshohjahon750@gmail.com</strong>) ruxsat olgan.
+            Admin panelga faqat tasdiqlangan administratorlar (<strong>ismoilovshohjahon750@gmail.com, ranvar611@gmail.com</strong>) ruxsat olgan.
           </p>
         </div>
       </div>

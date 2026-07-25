@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, isAdminEmail } from '../types';
 import {
   signInWithPopup,
   createUserWithEmailAndPassword,
@@ -50,8 +50,8 @@ export const GoogleAuthModal: React.FC<Props> = ({
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
 
-    const isAdminEmail = userEmail.toLowerCase() === 'ismoilovshohjahon750@gmail.com';
-    const role = isAdminEmail ? 'admin' : (userSnap.exists() ? userSnap.data().role || 'student' : 'student');
+    const isAdmin = isAdminEmail(userEmail);
+    const role = isAdmin ? 'admin' : (userSnap.exists() ? userSnap.data().role || 'student' : 'student');
 
     const profileData: UserProfile = {
       id: uid,

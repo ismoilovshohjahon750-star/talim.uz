@@ -13,6 +13,17 @@ export const INITIAL_USERS: UserProfile[] = [
     lastActive: "Hozir",
     testsTaken: 0,
     avgScore: 0
+  },
+  {
+    id: "admin-2",
+    name: "Ranvar Admin",
+    email: "ranvar611@gmail.com",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ranvar",
+    role: "admin",
+    registeredAt: "2025-01-10",
+    lastActive: "Hozir",
+    testsTaken: 0,
+    avgScore: 0
   }
 ];
 

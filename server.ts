@@ -41,6 +41,8 @@ app.get("/api/data", (req, res) => {
   });
 });
 
+const ADMIN_EMAILS = ["ismoilovshohjahon750@gmail.com", "ranvar611@gmail.com"];
+
 // API: Save user test attempt
 app.post("/api/attempts", (req, res) => {
   const { userId, userName, userEmail, testId, testTitle, score, totalQuestions } = req.body;
@@ -69,7 +71,7 @@ app.post("/api/attempts", (req, res) => {
       name: userName || "Foydalanuvchi",
       email: userEmail,
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName || "User")}`,
-      role: userEmail === "ismoilovshohjahon750@gmail.com" ? "admin" : "student",
+      role: ADMIN_EMAILS.includes(userEmail.toLowerCase()) ? "admin" : "student",
       registeredAt: new Date().toISOString().split("T")[0],
       lastActive: "Hozir",
       testsTaken: 0,
@@ -97,7 +99,7 @@ app.post("/api/auth/login", (req, res) => {
   }
 
   let user = registeredUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  const isAdmin = email.toLowerCase() === "ismoilovshohjahon750@gmail.com";
+  const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
 
   if (!user) {
     user = {

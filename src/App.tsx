@@ -3,7 +3,7 @@ import { Header } from './components/Header';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { TestRunner } from './components/TestRunner';
 import { AdminPanel } from './components/AdminPanel';
-import { TestModule, UserProfile, UserAttempt } from './types';
+import { TestModule, UserProfile, UserAttempt, isAdminEmail } from './types';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
@@ -36,12 +36,12 @@ export function App() {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userSnap = await getDoc(userDocRef);
 
-          const isPrimaryAdmin = firebaseUser.email?.toLowerCase() === 'ismoilovshohjahon750@gmail.com';
+          const isPrimaryAdmin = isAdminEmail(firebaseUser.email);
           let profile: UserProfile;
 
           if (userSnap.exists()) {
             profile = userSnap.data() as UserProfile;
-            // Ensure admin role for primary admin
+            // Ensure admin role for primary admins
             if (isPrimaryAdmin && profile.role !== 'admin') {
               profile.role = 'admin';
               await setDoc(userDocRef, { role: 'admin' }, { merge: true });
@@ -254,7 +254,7 @@ export function App() {
         currentUser={currentUser}
         onLogin={(user) => {
           setCurrentUser(user);
-          if (user.email.toLowerCase() === 'ismoilovshohjahon750@gmail.com') {
+          if (isAdminEmail(user.email)) {
             setViewMode('admin');
           }
         }}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, isAdminEmail } from '../types';
 import { ShieldCheck, LogIn, LogOut, BookOpen, Settings, LayoutDashboard } from 'lucide-react';
 
 interface Props {
@@ -17,8 +17,8 @@ export const Header: React.FC<Props> = ({
   viewMode,
   onToggleViewMode,
 }) => {
-  // STRICT check for Admin email requirement
-  const isAdminUser = currentUser?.email.toLowerCase() === 'ismoilovshohjahon750@gmail.com';
+  // Check for Admin status
+  const isAdminUser = currentUser?.role === 'admin' || isAdminEmail(currentUser?.email);
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
