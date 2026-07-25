@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile, isAdminEmail, getNormalizedSubject } from '../types';
-import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
   modules: TestModule[];
@@ -19,6 +19,16 @@ export const TestRunner: React.FC<Props> = ({
 }) => {
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const subjectScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollSubject = (direction: 'left' | 'right') => {
+    if (subjectScrollRef.current) {
+      subjectScrollRef.current.scrollBy({
+        left: direction === 'left' ? -220 : 220,
+        behavior: 'smooth',
+      });
+    }
+  };
   const [activeModule, setActiveModule] = useState<TestModule | null>(null);
   const [currentQIndex, setCurrentQIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<number, any>>({});
@@ -38,9 +48,9 @@ export const TestRunner: React.FC<Props> = ({
   };
 
   // Get distinct normalized subjects
-  const rawSubjects = Array.from(new Set(modules.map((m) => getNormalizedSubject(m))));
-  const defaultSubjects = ['Biologiya', 'Informatika (IC3)', 'Fizika', 'Kimyo', 'Matematika'];
-  const allKnownSubjects = Array.from(new Set([...defaultSubjects, ...rawSubjects]));
+  const rawSubjects: string[] = Array.from(new Set(modules.map((m) => getNormalizedSubject(m))));
+  const defaultSubjects: string[] = ['Biologiya', 'Informatika (IC3)', 'Fizika', 'Kimyo', 'Matematika'];
+  const allKnownSubjects: string[] = Array.from(new Set<string>([...defaultSubjects, ...rawSubjects]));
 
   // Filter modules by subject & level
   const filteredModules = modules.filter((m) => {
@@ -238,42 +248,72 @@ export const TestRunner: React.FC<Props> = ({
         <div className="mb-6 space-y-3">
           {/* Main Subject Tabs */}
           <div>
-            <div className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" /> Fanlar Bo'limi (Subject Section):
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-extrabold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" /> Fanlar Bo'limi (Subject Section):
+              </div>
+
+              {/* Navigation buttons: Orqaga / Oldinga */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => scrollSubject('left')}
+                  title="Orqaga otkazish"
+                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-indigo-50 border border-gray-200 text-gray-700 hover:text-indigo-600 text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95"
+                >
+                  <ChevronLeft className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Orqaga</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollSubject('right')}
+                  title="Oldinga otkazish"
+                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-indigo-50 border border-gray-200 text-gray-700 hover:text-indigo-600 text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95"
+                >
+                  <span className="hidden sm:inline">Oldinga</span>
+                  <ChevronRight className="w-4 h-4 text-indigo-600" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                onClick={() => setSelectedSubject('all')}
-                className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border ${
-                  selectedSubject === 'all'
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                }`}
+
+            <div>
+              <div
+                ref={subjectScrollRef}
+                className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 scrollbar-none scroll-smooth grow"
               >
-                <Layers className="w-3.5 h-3.5" /> Barcha Fanlar ({modules.length})
-              </button>
-              {allKnownSubjects.map((sub) => {
-                const subCount = modules.filter((m) => getNormalizedSubject(m).toLowerCase() === sub.toLowerCase()).length;
-                return (
-                  <button
-                    key={sub}
-                    onClick={() => setSelectedSubject(sub)}
-                    className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border ${
-                      selectedSubject.toLowerCase() === sub.toLowerCase()
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span>{sub === 'Biologiya' ? '🧬' : sub.includes('Informatika') ? '💻' : sub === 'Fizika' ? '⚡' : sub === 'Kimyo' ? '🧪' : '📚'}</span>
-                    <span>{sub}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                      selectedSubject.toLowerCase() === sub.toLowerCase() ? 'bg-indigo-800 text-indigo-100' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {subCount}
-                    </span>
-                  </button>
-                );
-              })}
+                <button
+                  onClick={() => setSelectedSubject('all')}
+                  className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border shrink-0 ${
+                    selectedSubject === 'all'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" /> Barcha Fanlar ({modules.length})
+                </button>
+                {allKnownSubjects.map((sub) => {
+                  const subCount = modules.filter((m) => getNormalizedSubject(m).toLowerCase() === sub.toLowerCase()).length;
+                  return (
+                    <button
+                      key={sub}
+                      onClick={() => setSelectedSubject(sub)}
+                      className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border shrink-0 ${
+                        selectedSubject.toLowerCase() === sub.toLowerCase()
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span>{sub === 'Biologiya' ? '🧬' : sub.includes('Informatika') ? '💻' : sub === 'Fizika' ? '⚡' : sub === 'Kimyo' ? '🧪' : '📚'}</span>
+                      <span>{sub}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                        selectedSubject.toLowerCase() === sub.toLowerCase() ? 'bg-indigo-800 text-indigo-100' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {subCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
