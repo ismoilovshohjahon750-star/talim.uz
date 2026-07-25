@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { TestModule, UserProfile, UserAttempt, Question, isAdminEmail } from '../types';
+import { TestModule, UserProfile, UserAttempt, Question, isAdminEmail, getNormalizedSubject } from '../types';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Users, FileText, PlusCircle, Upload, Sparkles, CheckCircle, Trash2, ChevronRight, ShieldAlert, FileType, Check, ArrowRight, RefreshCw, Eye } from 'lucide-react';
+import { Users, FileText, PlusCircle, Upload, Sparkles, CheckCircle, Trash2, ChevronRight, ShieldAlert, FileType, Check, ArrowRight, RefreshCw, Eye, DollarSign, Lock, Unlock, Tag, Edit3, Save } from 'lucide-react';
 
 interface Props {
   currentUser: UserProfile | null;
@@ -25,14 +25,68 @@ export const AdminPanel: React.FC<Props> = ({
 
   // 3-Step Wizard State
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+  const [selectedSubject, setSelectedSubject] = useState<string>('Biologiya');
   const [selectedLevel, setSelectedLevel] = useState<string>('Level 1');
-  const [testTitle, setTestTitle] = useState<string>('1-modul — Test 3');
+  const [testTitle, setTestTitle] = useState<string>('1-Mavzu: Kirish va Asoslar');
+  const [wizardIsPaid, setWizardIsPaid] = useState<boolean>(false);
+  const [wizardPrice, setWizardPrice] = useState<number>(5);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState<string>('');
   const [loadingAI, setLoadingAI] = useState<boolean>(false);
   const [extractedModule, setExtractedModule] = useState<TestModule | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [selectedModuleView, setSelectedModuleView] = useState<TestModule | null>(null);
+
+  // Pricing State
+  const [editingPriceModuleId, setEditingPriceModuleId] = useState<string | null>(null);
+  const [tempIsPaid, setTempIsPaid] = useState<boolean>(false);
+  const [tempPrice, setTempPrice] = useState<number>(5);
+
+  const handleSaveModulePrice = async (moduleId: string, isPaid: boolean, price: number) => {
+    const validPrice = Math.min(10, Math.max(4, Number(price) || 5));
+    try {
+      await setDoc(doc(db, 'testModules', moduleId), { isPaid, price: isPaid ? validPrice : null }, { merge: true });
+      await fetch(`/api/modules/${moduleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPaid, price: isPaid ? validPrice : null }),
+      }).catch(() => {});
+      setEditingPriceModuleId(null);
+      onRefreshData();
+    } catch (err) {
+      console.error('Price save error:', err);
+    }
+  };
+
+  const handleToggleQuestionPaid = (idx: number, isPaid: boolean, price: number = 5) => {
+    if (!selectedModuleView) return;
+    const updatedQuestions = [...selectedModuleView.questions];
+    updatedQuestions[idx] = {
+      ...updatedQuestions[idx],
+      isPaid,
+      price: isPaid ? Math.min(10, Math.max(4, price)) : undefined,
+    };
+    setSelectedModuleView({
+      ...selectedModuleView,
+      questions: updatedQuestions,
+    });
+  };
+
+  const handleSaveQuestionPrices = async () => {
+    if (!selectedModuleView) return;
+    try {
+      await setDoc(
+        doc(db, 'testModules', selectedModuleView.id),
+        { questions: selectedModuleView.questions },
+        { merge: true }
+      );
+      onRefreshData();
+      alert("Savollar narxlari muvaffaqiyatli saqlandi!");
+    } catch (err) {
+      console.error(err);
+      alert("Saqlashda xatolik yuz berdi.");
+    }
+  };
 
   // Strict Security Check
   if (!isAdmin) {
@@ -86,6 +140,7 @@ export const AdminPanel: React.FC<Props> = ({
           pdfBase64,
           mimeType: selectedFile?.type || 'application/pdf',
           rawText: pastedText,
+          subject: selectedSubject,
           level: selectedLevel,
           testTitle: testTitle,
         }),
@@ -98,7 +153,14 @@ export const AdminPanel: React.FC<Props> = ({
       }
 
       if (data.module && data.module.id) {
-        await setDoc(doc(db, 'testModules', data.module.id), data.module);
+        const moduleToSave = {
+          ...data.module,
+          subject: selectedSubject || 'Biologiya',
+          isPaid: wizardIsPaid,
+          price: wizardIsPaid ? Math.min(10, Math.max(4, wizardPrice)) : null,
+        };
+        await setDoc(doc(db, 'testModules', data.module.id), moduleToSave);
+        data.module = moduleToSave;
       }
 
       setExtractedModule(data.module);
@@ -253,7 +315,10 @@ export const AdminPanel: React.FC<Props> = ({
                 Yangi test moduli yaratish uchun yuqoridagi <strong>"+ Yangi savol qo'shish (3-Step Wizard)"</strong> tugmasini bosing va PDF test faylingizni yuklang.
               </p>
               <button
-                onClick={() => setActiveTab('add-ai')}
+                onClick={() => {
+                  setActiveTab('wizard');
+                  setWizardStep(1);
+                }}
                 className="btn btn-primary inline-flex items-center gap-2 px-5 py-2.5"
               >
                 <PlusCircle className="w-4 h-4" /> PDF dan Test Yaratish
@@ -264,29 +329,127 @@ export const AdminPanel: React.FC<Props> = ({
               {modules.map((m) => (
                 <div
                   key={m.id}
-                  className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between"
+                  className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between relative"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">
-                        {m.level}
-                      </span>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-lg shadow-2xs flex items-center gap-1">
+                          <span>{getNormalizedSubject(m) === 'Biologiya' ? '🧬' : '📚'}</span> {getNormalizedSubject(m)}
+                        </span>
+                        <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-100">
+                          {m.level}
+                        </span>
+                        {m.isPaid ? (
+                          <span className="text-xs font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full flex items-center gap-1 border border-amber-200">
+                            <Lock className="w-3 h-3 text-amber-600" /> Pullik (${m.price || 5})
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1 border border-emerald-200">
+                            <Unlock className="w-3 h-3 text-emerald-600" /> Bepul
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-500 font-semibold">
                         {m.questions.length} ta savol
                       </span>
                     </div>
+
                     <h3 className="text-lg font-bold text-gray-900 mb-2">{m.title}</h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 mb-3">
                       Baza moduli kodi: <code className="bg-gray-100 px-1.5 py-0.5 rounded">{m.id}</code>
                     </p>
+
+                    {/* Pricing Management Form per Module */}
+                    {editingPriceModuleId === m.id ? (
+                      <div className="mt-3 p-3.5 bg-amber-50/90 border border-amber-200 rounded-2xl space-y-3 animate-fade-in">
+                        <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                          <DollarSign className="w-4 h-4 text-amber-600" /> Test Narxini Sozlash ($4 - $10)
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setTempIsPaid(false)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                              !tempIsPaid ? 'bg-emerald-600 text-white shadow-xs' : 'bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            Bepul
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTempIsPaid(true)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                              tempIsPaid ? 'bg-amber-600 text-white shadow-xs' : 'bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            Pullik ($4 - $10)
+                          </button>
+                        </div>
+
+                        {tempIsPaid && (
+                          <div className="space-y-1.5">
+                            <label className="block text-[11px] font-bold text-gray-700">
+                              Narxni tanlang ($4 dan $10 gacha):
+                            </label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {[4, 5, 6, 7, 8, 9, 10].map((p) => (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  onClick={() => setTempPrice(p)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                    tempPrice === p
+                                      ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  ${p}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-amber-200/60">
+                          <button
+                            type="button"
+                            onClick={() => setEditingPriceModuleId(null)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-200"
+                          >
+                            Bekor qilish
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveModulePrice(m.id, tempIsPaid, tempPrice)}
+                            className="px-4 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-xs flex items-center gap-1"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Saqlash
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPriceModuleId(m.id);
+                          setTempIsPaid(!!m.isPaid);
+                          setTempPrice(m.price || 5);
+                        }}
+                        className="mt-2 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1.5"
+                      >
+                        <Tag className="w-3.5 h-3.5 text-amber-600" /> Narxini sozlash ({m.isPaid ? `$${m.price || 5}` : 'Bepul'})
+                      </button>
+                    )}
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
                     <button
                       onClick={() => setSelectedModuleView(m)}
-                      className="btn btn-secondary text-xs py-1.5 px-3"
+                      className="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
                     >
-                      <Eye className="w-3.5 h-3.5" /> Savollarni ko'rish
+                      <Eye className="w-3.5 h-3.5" /> Savollar va Narxlar
                     </button>
                     <button
                       onClick={() => handleDeleteModule(m.id)}
@@ -301,30 +464,95 @@ export const AdminPanel: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Module Question Detail Modal */}
+          {/* Module Question Detail & Price Editor Modal */}
           {selectedModuleView && (
-            <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-lg mt-6">
-              <div className="flex items-center justify-between mb-4 border-b pb-3">
-                <h3 className="text-lg font-bold text-gray-900">
-                  {selectedModuleView.title} — Savollar ro'yxati
-                </h3>
-                <button
-                  onClick={() => setSelectedModuleView(null)}
-                  className="btn btn-secondary text-xs"
-                >
-                  Yopish
-                </button>
+            <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xl mt-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 border-b pb-4 gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {selectedModuleView.title} — Savollar va Narx Sozlamalari
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Admin sifatida istalgan yakka savolni ham pullik ($4 - $10) deb belgilashingiz mumkin.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveQuestionPrices}
+                    className="btn btn-primary text-xs py-2 px-4 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Save className="w-4 h-4" /> O'zgarishlarni Saqlash
+                  </button>
+                  <button
+                    onClick={() => setSelectedModuleView(null)}
+                    className="btn btn-secondary text-xs py-2 px-3"
+                  >
+                    Yopish
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-[550px] overflow-y-auto pr-2">
                 {selectedModuleView.questions.map((q, idx) => (
-                  <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200">
-                    <div className="font-bold text-sm text-gray-900 mb-1">
-                      #{idx + 1}. {q.quz}
+                  <div key={idx} className="p-4 bg-gray-50/80 rounded-2xl border border-gray-200 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-bold text-sm text-gray-900 mb-1">
+                          #{idx + 1}. {q.quz}
+                        </div>
+                        <div className="text-xs text-gray-500 italic">{q.qen}</div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md uppercase">
+                          {q.type}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 italic mb-2">{q.qen}</div>
-                    <div className="text-xs font-semibold text-indigo-600 uppercase">
-                      Tur: {q.type}
+
+                    {/* Question-level pricing toggle */}
+                    <div className="pt-2 border-t border-gray-200/60 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-700">Ushbu savol:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleQuestionPaid(idx, false)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                            !q.isPaid ? 'bg-emerald-600 text-white shadow-xs' : 'bg-gray-200 text-gray-600'
+                          }`}
+                        >
+                          Bepul
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleQuestionPaid(idx, true, q.price || 5)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                            q.isPaid ? 'bg-amber-600 text-white shadow-xs' : 'bg-gray-200 text-gray-600'
+                          }`}
+                        >
+                          Pullik ($4 - $10)
+                        </button>
+                      </div>
+
+                      {q.isPaid && (
+                        <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl">
+                          <span className="text-[11px] font-bold text-amber-900">Narxi:</span>
+                          {[4, 5, 6, 7, 8, 9, 10].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => handleToggleQuestionPaid(idx, true, p)}
+                              className={`w-6 h-6 rounded-md text-[11px] font-bold flex items-center justify-center transition ${
+                                (q.price || 5) === p
+                                  ? 'bg-amber-500 text-white shadow-xs'
+                                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-amber-100'
+                              }`}
+                            >
+                              ${p}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -372,18 +600,50 @@ export const AdminPanel: React.FC<Props> = ({
 
           <div className="text-center mb-6">
             <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-              {wizardStep === 1 && "Bosqich 1: Murakkablik va Test Nomini Tanlash"}
+              {wizardStep === 1 && "Bosqich 1: Murakkablik, Nom va Narxni Tanlash"}
               {wizardStep === 2 && "Bosqich 2: PDF Hujjatini Yuklash"}
               {wizardStep === 3 && "Bosqich 3: AI Tahlili va Natijani Saqlash"}
             </span>
           </div>
 
-          {/* STEP 1: SELECT DIFFICULTY & TITLE */}
+          {/* STEP 1: SELECT SUBJECT, DIFFICULTY, TITLE & PRICE */}
           {wizardStep === 1 && (
             <div className="max-w-md mx-auto space-y-5 animate-fade-in">
+              {/* Subject Selection */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase mb-2">
-                  1. Murakkablik Darajasini Tanlang:
+                  1. Fan Bo'limi (Subject Section):
+                </label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  {['Biologiya', 'Informatika (IC3)', 'Fizika', 'Kimyo'].map((sub) => (
+                    <button
+                      key={sub}
+                      type="button"
+                      onClick={() => setSelectedSubject(sub)}
+                      className={`p-2.5 rounded-2xl border-2 font-bold text-xs text-center transition flex items-center justify-center gap-1.5 ${
+                        selectedSubject === sub
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-xs'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                      }`}
+                    >
+                      <span>{sub === 'Biologiya' ? '🧬' : sub.includes('Informatika') ? '💻' : sub === 'Fizika' ? '⚡' : '🧪'}</span>
+                      <span>{sub}</span>
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  placeholder="Yoki custom fan nomini kiriting (masalan: Matematika)"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50/50"
+                />
+              </div>
+
+              {/* Difficulty Level Selection */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-2">
+                  2. Murakkablik Darajasi:
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   {['Level 1', 'Level 2', 'Level 3'].map((lvl) => (
@@ -405,15 +665,70 @@ export const AdminPanel: React.FC<Props> = ({
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                  2. Test/Modul Nomi:
+                  3. Test/Modul Nomi:
                 </label>
                 <input
                   type="text"
                   value={testTitle}
                   onChange={(e) => setTestTitle(e.target.value)}
-                  placeholder="Masalan: 1-modul — Test 3"
+                  placeholder="Masalan: 1-Mavzu: Hujayra biologiyasi"
                   className="w-full p-3.5 border border-gray-300 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+              </div>
+
+              {/* Wizard Pricing Selection */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-2">
+                  4. Test Turi va Narxi (Bepul yoki $4 - $10):
+                </label>
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setWizardIsPaid(false)}
+                    className={`p-3 rounded-2xl border-2 font-bold text-xs text-center transition flex items-center justify-center gap-2 ${
+                      !wizardIsPaid
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-xs'
+                        : 'border-gray-200 text-gray-600'
+                    }`}
+                  >
+                    <Unlock className="w-4 h-4 text-emerald-600" /> Bepul (Free)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWizardIsPaid(true)}
+                    className={`p-3 rounded-2xl border-2 font-bold text-xs text-center transition flex items-center justify-center gap-2 ${
+                      wizardIsPaid
+                        ? 'border-amber-600 bg-amber-50 text-amber-700 shadow-xs'
+                        : 'border-gray-200 text-gray-600'
+                    }`}
+                  >
+                    <Lock className="w-4 h-4 text-amber-600" /> Pullik ($4 - $10)
+                  </button>
+                </div>
+
+                {wizardIsPaid && (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl space-y-2 animate-fade-in">
+                    <span className="block text-xs font-bold text-amber-900">
+                      Ushbu test uchun narxni tanlang ($4 - $10):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[4, 5, 6, 7, 8, 9, 10].map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setWizardPrice(p)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                            wizardPrice === p
+                              ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          ${p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button

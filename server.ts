@@ -126,13 +126,14 @@ app.post("/api/auth/login", (req, res) => {
 
 // API: Add or update test module and questions
 app.post("/api/modules", (req, res) => {
-  const { id, title, level, questions } = req.body;
+  const { id, title, subject, level, questions, isPaid, price } = req.body;
 
   let existingIndex = testModules.findIndex((m) => m.id === id);
+  const updatedModule = { id, title, subject: subject || "Biologiya", level, questions, isPaid, price };
   if (existingIndex >= 0) {
-    testModules[existingIndex] = { id, title, level, questions };
+    testModules[existingIndex] = updatedModule;
   } else {
-    testModules.push({ id, title, level, questions });
+    testModules.push(updatedModule);
   }
 
   res.json({ success: true, modules: testModules });
@@ -148,7 +149,7 @@ app.delete("/api/modules/:id", (req, res) => {
 // API: AI 3-Step Wizard PDF Question Parser
 app.post("/api/ai/parse-pdf", async (req, res) => {
   try {
-    const { pdfBase64, mimeType, rawText, level, testTitle } = req.body;
+    const { pdfBase64, mimeType, rawText, level, subject, testTitle } = req.body;
 
     if (!pdfBase64 && !rawText) {
       return res.status(400).json({ error: "PDF fayli yoki matn yuborilmadi." });
@@ -261,9 +262,18 @@ SCHEMA FORMAT:
 
     // Assign / update module
     const moduleId = "mod-" + Date.now();
+    let detectedSubject = subject;
+    if (!detectedSubject) {
+      const lowerTitle = (testTitle || "").toLowerCase();
+      if (lowerTitle.includes("bio")) detectedSubject = "Biologiya";
+      else if (lowerTitle.includes("info") || lowerTitle.includes("ic3")) detectedSubject = "Informatika (IC3)";
+      else detectedSubject = "Biologiya";
+    }
+
     const newModule: TestModule = {
       id: moduleId,
       title: testTitle || `${level || 'Level 1'} — Yangi Test`,
+      subject: detectedSubject,
       level: level || "Level 1",
       questions: parsedQuestions,
     };

@@ -15,6 +15,7 @@ import {
   addDoc,
   onSnapshot,
   serverTimestamp,
+  arrayUnion,
 } from 'firebase/firestore';
 
 export function App() {
@@ -207,6 +208,23 @@ export function App() {
     }
   };
 
+  const handleUnlockTest = async (testId: string) => {
+    if (!currentUser?.id || currentUser.id === 'guest') return;
+
+    try {
+      const currentUnlocked = currentUser.unlockedTests || [];
+      if (!currentUnlocked.includes(testId)) {
+        const updatedUnlockedTests = [...currentUnlocked, testId];
+        setCurrentUser((prev) => (prev ? { ...prev, unlockedTests: updatedUnlockedTests } : null));
+
+        const userRef = doc(db, 'users', currentUser.id);
+        await setDoc(userRef, { unlockedTests: arrayUnion(testId) }, { merge: true });
+      }
+    } catch (err) {
+      console.error("Unlock test error:", err);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -243,6 +261,8 @@ export function App() {
             modules={modules}
             currentUser={currentUser}
             onSaveAttempt={handleSaveAttempt}
+            onUnlockTest={handleUnlockTest}
+            onOpenAuth={() => setIsAuthOpen(true)}
           />
         )}
       </main>

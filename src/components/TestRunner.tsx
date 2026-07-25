@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
-import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile } from '../types';
-import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles } from 'lucide-react';
+import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile, isAdminEmail, getNormalizedSubject } from '../types';
+import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers } from 'lucide-react';
 
 interface Props {
   modules: TestModule[];
   currentUser: UserProfile | null;
   onSaveAttempt: (testId: string, testTitle: string, score: number, total: number) => void;
+  onUnlockTest?: (testId: string) => void;
+  onOpenAuth?: () => void;
 }
 
 export const TestRunner: React.FC<Props> = ({
   modules,
   currentUser,
   onSaveAttempt,
+  onUnlockTest,
+  onOpenAuth,
 }) => {
+  const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [activeModule, setActiveModule] = useState<TestModule | null>(null);
   const [currentQIndex, setCurrentQIndex] = useState<number>(0);
@@ -20,12 +25,50 @@ export const TestRunner: React.FC<Props> = ({
   const [lang, setLang] = useState<'uz' | 'en'>('uz');
   const [isFinished, setIsFinished] = useState<boolean>(false);
 
-  // Filter modules by level
-  const filteredModules = selectedLevel === 'all'
-    ? modules
-    : modules.filter((m) => m.level.toLowerCase() === selectedLevel.toLowerCase());
+  // Payment Modal State
+  const [paymentModalModule, setPaymentModalModule] = useState<TestModule | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+
+  const isAdmin = currentUser?.role === 'admin' || isAdminEmail(currentUser?.email);
+
+  const isModuleUnlocked = (m: TestModule): boolean => {
+    if (isAdmin) return true;
+    if (!m.isPaid) return true;
+    return currentUser?.unlockedTests?.includes(m.id) || false;
+  };
+
+  // Get distinct normalized subjects
+  const rawSubjects = Array.from(new Set(modules.map((m) => getNormalizedSubject(m))));
+  const defaultSubjects = ['Biologiya', 'Informatika (IC3)', 'Fizika', 'Kimyo', 'Matematika'];
+  const allKnownSubjects = Array.from(new Set([...defaultSubjects, ...rawSubjects]));
+
+  // Filter modules by subject & level
+  const filteredModules = modules.filter((m) => {
+    const normSub = getNormalizedSubject(m);
+    const matchesSubject =
+      selectedSubject === 'all' || normSub.toLowerCase() === selectedSubject.toLowerCase();
+
+    const normLvl = (m.level || '').toLowerCase();
+    const matchesLevel =
+      selectedLevel === 'all' || normLvl.includes(selectedLevel.toLowerCase());
+
+    return matchesSubject && matchesLevel;
+  });
 
   const startTest = (module: TestModule) => {
+    if (!isModuleUnlocked(module)) {
+      if (!currentUser) {
+        if (onOpenAuth) {
+          onOpenAuth();
+        } else {
+          alert("Pullik testni xarid qilish uchun iltimos, avval tizimga kiring!");
+        }
+        return;
+      }
+      setPaymentModalModule(module);
+      return;
+    }
+
     setActiveModule(module);
     setCurrentQIndex(0);
     setAnswers({});
@@ -191,34 +234,77 @@ export const TestRunner: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Level Filters */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-gray-200 shadow-xs">
+        {/* Subject & Level Filters */}
+        <div className="mb-6 space-y-3">
+          {/* Main Subject Tabs */}
+          <div>
+            <div className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" /> Fanlar Bo'limi (Subject Section):
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => setSelectedSubject('all')}
+                className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border ${
+                  selectedSubject === 'all'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" /> Barcha Fanlar ({modules.length})
+              </button>
+              {allKnownSubjects.map((sub) => {
+                const subCount = modules.filter((m) => getNormalizedSubject(m).toLowerCase() === sub.toLowerCase()).length;
+                return (
+                  <button
+                    key={sub}
+                    onClick={() => setSelectedSubject(sub)}
+                    className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border ${
+                      selectedSubject.toLowerCase() === sub.toLowerCase()
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>{sub === 'Biologiya' ? '🧬' : sub.includes('Informatika') ? '💻' : sub === 'Fizika' ? '⚡' : sub === 'Kimyo' ? '🧪' : '📚'}</span>
+                    <span>{sub}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                      selectedSubject.toLowerCase() === sub.toLowerCase() ? 'bg-indigo-800 text-indigo-100' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {subCount}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Level Filter Sub-pills */}
+          <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs p-1.5 rounded-2xl border border-gray-200 shadow-2xs w-fit flex-wrap">
+            <span className="text-[11px] font-bold text-gray-500 px-2">Daraja:</span>
             <button
               onClick={() => setSelectedLevel('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 selectedLevel === 'all'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-2xs'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              Barcha Testlar ({modules.length})
+              Barchasi
             </button>
             <button
               onClick={() => setSelectedLevel('level 1')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 selectedLevel === 'level 1'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-2xs'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              1-Modul (Boshlang'ich)
+              1-Modul (Oson)
             </button>
             <button
               onClick={() => setSelectedLevel('level 2')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 selectedLevel === 'level 2'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-2xs'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -226,9 +312,9 @@ export const TestRunner: React.FC<Props> = ({
             </button>
             <button
               onClick={() => setSelectedLevel('level 3')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 selectedLevel === 'level 3'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-2xs'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -243,43 +329,159 @@ export const TestRunner: React.FC<Props> = ({
             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <HelpCircle className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Hozircha testlar mavjud emas</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Hozircha mos testlar topilmadi</h3>
             <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-              Platformada test modullari hali yuklanmagan. Admin panel orqali PDF fayldan yangi testlarni AI Wizard yordamida yuklashingiz mumkin.
+              Tanlangan fan yoki daraja bo'yicha hali test modullari yuklanmagan. Admin panel orqali yangi testlarni yuklashingiz mumkin.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredModules.map((m) => (
-              <div
-                key={m.id}
-                onClick={() => startTest(m)}
-                className="tcard group hover:border-indigo-500"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100">
-                      {m.level}
-                    </span>
-                    <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
-                      <HelpCircle className="w-3.5 h-3.5" /> {m.questions.length} ta savol
+            {filteredModules.map((m) => {
+              const unlocked = isModuleUnlocked(m);
+              const subjectName = getNormalizedSubject(m);
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => startTest(m)}
+                  className={`tcard group transition relative ${
+                    m.isPaid && !unlocked
+                      ? 'hover:border-amber-500 bg-linear-to-b from-white to-amber-50/20'
+                      : 'hover:border-indigo-500'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-lg shadow-2xs flex items-center gap-1">
+                          <span>{subjectName === 'Biologiya' ? '🧬' : '📚'}</span> {subjectName}
+                        </span>
+                        <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-100">
+                          {m.level}
+                        </span>
+                      </div>
+
+                      {m.isPaid ? (
+                        unlocked ? (
+                          <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1 border border-emerald-200">
+                            <Unlock className="w-3.5 h-3.5 text-emerald-600" /> Ochilgan (${m.price || 5})
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full flex items-center gap-1 border border-amber-300 shadow-2xs">
+                            <Lock className="w-3.5 h-3.5 text-amber-600" /> Pullik (${m.price || 5})
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100">
+                          Bepul
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition">
+                      {m.title}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      IC3 GS6 standartlari bo'yicha tayyorlangan {m.questions.length} ta amaliy va nazariy savollar to'plami.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    {m.isPaid && !unlocked ? (
+                      <span className="text-xs font-bold text-amber-700 group-hover:translate-x-1 transition flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5" /> Xarid qilish (${m.price || 5}.00)
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition flex items-center gap-1">
+                        Testni boshlash <ArrowRight className="w-4 h-4" />
+                      </span>
+                    )}
+
+                    <span className="text-[11px] text-gray-400 font-semibold">
+                      {m.questions.length} ta savol
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition">
-                    {m.title}
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    IC3 GS6 standartlari bo'yicha tayyorlangan amaliy va nazariy savollar to'plami.
-                  </p>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition flex items-center gap-1">
-                    Testni boshlash <ArrowRight className="w-4 h-4" />
-                  </span>
+        {/* Payment & Unlock Modal */}
+        {paymentModalModule && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-gray-200 shadow-2xl relative">
+              <div className="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200 shadow-xs">
+                <Lock className="w-7 h-7" />
+              </div>
+
+              <div className="text-center mb-6">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+                  ⭐ Premium Test Moduli
+                </span>
+                <h3 className="text-xl font-extrabold text-gray-900 mt-2">
+                  {paymentModalModule.title}
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Ushbu test {paymentModalModule.questions.length} ta savoldan iborat bo'lib, administratorlar tomonidan pullik qilingan.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 mb-6 space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-gray-600">Test narxi:</span>
+                  <span className="text-2xl font-black text-amber-600">${paymentModalModule.price || 5}.00 USD</span>
+                </div>
+                <div className="text-xs text-gray-600 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Barcha savollar va kalit javoblar tahlili</span>
+                </div>
+                <div className="text-xs text-gray-600 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Bir marta to'lab, cheksiz kirish huquqini oling</span>
                 </div>
               </div>
-            ))}
+
+              <div className="space-y-3">
+                <button
+                  onClick={async () => {
+                    setIsProcessingPayment(true);
+                    setTimeout(() => {
+                      if (onUnlockTest && paymentModalModule) {
+                        onUnlockTest(paymentModalModule.id);
+                      }
+                      const unlockedModule = paymentModalModule;
+                      setPaymentModalModule(null);
+                      setIsProcessingPayment(false);
+                      if (unlockedModule) {
+                        setActiveModule(unlockedModule);
+                        setCurrentQIndex(0);
+                        setAnswers({});
+                        setIsFinished(false);
+                      }
+                    }, 700);
+                  }}
+                  disabled={isProcessingPayment}
+                  className="w-full btn py-3.5 rounded-2xl font-bold text-sm shadow-md flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-indigo-600 text-white hover:opacity-95 transition"
+                >
+                  {isProcessingPayment ? (
+                    <>
+                      <Sparkles className="w-4 h-4 animate-spin text-amber-200" /> To'lov amalga oshirilmoqda...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" /> Hozir To'lash va Ochish (${paymentModalModule.price || 5}.00)
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setPaymentModalModule(null)}
+                  className="w-full btn btn-secondary py-3 rounded-2xl text-xs font-semibold"
+                >
+                  Yopish
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
