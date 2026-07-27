@@ -227,7 +227,7 @@ export const ProfileModal: React.FC<Props> = ({
 
                         <div className="min-w-0">
                           <div className="text-xs font-bold text-slate-900 truncate">
-                            {attempt.testTitle || 'IC3 Test Moduli'}
+                            {attempt.testTitle || 'UniTest Moduli'}
                           </div>
                           <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
                             <span>{attempt.completedAt || 'Yaqinda'}</span>

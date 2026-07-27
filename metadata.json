@@ -1,6 +1,6 @@
 {
-  "name": "IC3 GS6 Test & Admin",
-  "description": "IC3 GS6 Digital Literacy certification test practice application with Google Authentication and AI-powered question parsing for administrators.",
+  "name": "UniTest",
+  "description": "Barcha fanlar va sohalar bo'yicha onlayn test topshirish, bilimni baholash va admin boshqaruv platformasi.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -3,8 +3,8 @@ export type Language = 'uz' | 'en';
 export const translations = {
   uz: {
     // Header & Navigation
-    portalTitle: "IC3 GS6 Portal",
-    portalSubtitle: "Raqamli savodxonlik xalqaro sertifikatlash testi",
+    portalTitle: "UniTest",
+    portalSubtitle: "Barcha fanlar va sohalar bo'yicha onlayn testlar portali",
     backToTests: "Testlarga qaytish",
     tests: "Testlar",
     openAdmin: "Admin panelni ochish",
@@ -22,13 +22,13 @@ export const translations = {
     navLogin: "Kirish",
 
     // Hero Section
-    heroBadge: "IC3 GS6 Xalqaro Sertifikatlash Portali",
-    heroTitle: "Raqamli Ko'nikmalar Imtihon Markazi",
-    heroSubtitle: "IC3 GS6 xalqaro standartlari asosida tuzilgan amaliy va nazariy savollarni yechib, bilimlaringizni baholang va milliy/xalqaro sertifikatga tayyorlaning.",
+    heroBadge: "UniTest — Yagona Onlayn Test Portali",
+    heroTitle: "Bilim va Ko'nikmalarni Baholash Markazi",
+    heroSubtitle: "Turli fan va sohalar bo'yicha amaliy va nazariy savollarni yechib, bilimlaringizni baholang va natijalaringizni kuzatib boring.",
     totalModulesCount: "{count} ta Test Moduli",
     modulesCountBadge: "{count} ta Test Moduli",
-    gs6Standard: "GS6 Standarti",
-    gs6Badge: "GS6 Standarti",
+    gs6Standard: "Sinov Testlari",
+    gs6Badge: "Sinov Testlari",
     aiAnalysis: "AI Tahlil & Generatsiya",
     aiAnalysisBadge: "AI Tahlil & Generatsiya",
 
@@ -66,7 +66,7 @@ export const translations = {
     paidBadge: "Pullik",
     unlockedTag: "Ochilgan",
     unlockedBadge: "Ochilgan",
-    cardQuestionCountDesc: "IC3 GS6 standartlari bo'yicha tayyorlangan {count} ta amaliy va nazariy savollar to'plami.",
+    cardQuestionCountDesc: "Ushbu test moduli uchun tayyorlangan {count} ta amaliy va nazariy savollar to'plami.",
     purchaseBtn: "Xarid qilish",
     questionsCountTag: "{count} ta savol",
     questionsLabel: "Savollar:",
@@ -86,7 +86,7 @@ export const translations = {
     // Access Code Modal
     unlockModalTitle: "Pullik Test Modulini Ochish",
     unlockModalSubtitle: "Ushbu test modulidan foydalanish uchun maxsus kirish kodini kiriting:",
-    codePlaceholder: "Kirish kodini kiriting (masalan: IC3-PRO-2026)",
+    codePlaceholder: "Kirish kodini kiriting (masalan: UNITEST-2026)",
     verifyAndUnlockBtn: "Kodni Tekshirish va Ochish",
     verifyingBtn: "Tekshirilmoqda...",
     invalidCodeError: "Xato promo-kod kiritildi!",
@@ -154,19 +154,19 @@ export const translations = {
     recentResultsTitle: "So'nggi Natijalar ({count})",
     passedCountTag: "{count} ta Muvaffaqiyatli",
     noTestsTakenTitle: "Siz hali test topshirmagansiz",
-    noTestsTakenSub: "Xalqaro IC3 GS6 standartidagi testlarni topshirib natijalaringizni shu yerda kuzating!",
+    noTestsTakenSub: "UniTest portalida testlarni topshirib natijalaringizni shu yerda kuzating!",
     signOutBtn: "Tizimdan Chiqish",
 
     // Auth Modal
     authTitle: "Tizimga Kirish",
-    authSubtitle: "IC3 GS6 portalida test topshirish va natijalaringizni saqlash uchun profilga kiring",
+    authSubtitle: "UniTest portalida test topshirish va natijalaringizni saqlash uchun profilga kiring",
     googleSignInBtn: "Google orqali kirish",
     authFooterNote: "Xavfsiz va tezkor Google Firebase Authentication",
   },
   en: {
     // Header & Navigation
-    portalTitle: "IC3 GS6 Portal",
-    portalSubtitle: "International Digital Literacy Certification Exam",
+    portalTitle: "UniTest",
+    portalSubtitle: "Universal Online Testing Platform Across All Subjects",
     backToTests: "Back to Tests",
     tests: "Tests",
     openAdmin: "Open Admin Panel",
@@ -184,13 +184,13 @@ export const translations = {
     navLogin: "Login",
 
     // Hero Section
-    heroBadge: "IC3 GS6 International Certification Portal",
-    heroTitle: "Digital Skills Examination Center",
-    heroSubtitle: "Solve practical and theoretical questions built on IC3 GS6 international standards, assess your knowledge, and prepare for national and global certification.",
+    heroBadge: "UniTest — Universal Online Testing Platform",
+    heroTitle: "Knowledge & Skill Assessment Center",
+    heroSubtitle: "Solve practical and theoretical questions across various subjects, evaluate your knowledge, and track your progress.",
     totalModulesCount: "{count} Test Modules",
     modulesCountBadge: "{count} Test Modules",
-    gs6Standard: "GS6 Standard",
-    gs6Badge: "GS6 Standard",
+    gs6Standard: "Practice Tests",
+    gs6Badge: "Practice Tests",
     aiAnalysis: "AI Analysis & Generation",
     aiAnalysisBadge: "AI Analysis & Generation",
 
@@ -199,7 +199,7 @@ export const translations = {
     scrollLeft: "Previous",
     scrollRight: "Next",
     allSubjects: "All Subjects ({count})",
-    subjectInformatika: "Computer Science (IC3)",
+    subjectInformatika: "Computer Science",
     subjectBiologiya: "Biology",
     subjectFizika: "Physics",
     subjectKimyo: "Chemistry",
@@ -228,7 +228,7 @@ export const translations = {
     paidBadge: "Paid",
     unlockedTag: "Unlocked",
     unlockedBadge: "Unlocked",
-    cardQuestionCountDesc: "A collection of {count} practical and theoretical questions prepared according to IC3 GS6 standards.",
+    cardQuestionCountDesc: "A collection of {count} practical and theoretical questions prepared for this module.",
     purchaseBtn: "Purchase",
     questionsCountTag: "{count} questions",
     questionsLabel: "Questions:",
@@ -248,7 +248,7 @@ export const translations = {
     // Access Code Modal
     unlockModalTitle: "Unlock Premium Test Module",
     unlockModalSubtitle: "Enter the special access code to unlock this test module:",
-    codePlaceholder: "Enter access code (e.g., IC3-PRO-2026)",
+    codePlaceholder: "Enter access code (e.g., UNITEST-2026)",
     verifyAndUnlockBtn: "Verify & Unlock Code",
     verifyingBtn: "Verifying...",
     invalidCodeError: "Invalid access promo code entered!",
@@ -316,12 +316,12 @@ export const translations = {
     recentResultsTitle: "Recent Results ({count})",
     passedCountTag: "{count} Passed",
     noTestsTakenTitle: "You haven't taken any tests yet",
-    noTestsTakenSub: "Take tests following IC3 GS6 international standards and track your progress here!",
+    noTestsTakenSub: "Take tests on UniTest and track your progress here!",
     signOutBtn: "Sign Out",
 
     // Auth Modal
     authTitle: "Sign In",
-    authSubtitle: "Sign in to save test results and access IC3 GS6 certification tests",
+    authSubtitle: "Sign in to UniTest to save test results and access practice tests",
     googleSignInBtn: "Continue with Google",
     authFooterNote: "Secure & fast Google Firebase Authentication",
   },

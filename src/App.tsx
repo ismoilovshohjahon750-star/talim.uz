@@ -266,7 +266,7 @@ export function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 py-4 sm:py-6 pb-20 md:pb-8">
+      <main className="flex-1 py-4 sm:py-6 pb-24">
         {viewMode === 'admin' ? (
           <AdminPanel
             currentUser={currentUser}
@@ -331,7 +331,7 @@ export function App() {
       <footer className="bg-white border-t border-gray-200 py-6 mt-12">
         <div className="wrap text-center text-xs text-gray-500">
           <p className="font-semibold text-gray-700">
-            IC3 GS6 Digital Literacy Exam & Admin Platform
+            UniTest — Onlayn Test va Bilimni Baholash Portali
           </p>
           <p className="mt-1 text-gray-400">
             © 2025 Barcha huquqlar himoyalangan. Firebase Auth, Firestore va Gemini AI bilan quvvatlangan.

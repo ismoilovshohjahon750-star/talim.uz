@@ -1,6 +1,6 @@
 import React from 'react';
-import { UserProfile, isAdminEmail } from '../types';
-import { ShieldCheck, LogIn, LogOut, BookOpen, Award } from 'lucide-react';
+import { UserProfile } from '../types';
+import { LogIn, LogOut, Award } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
 interface Props {
@@ -26,8 +26,6 @@ export const Header: React.FC<Props> = ({
 }) => {
   const currentLang = (lang && translations[lang]) ? lang : 'uz';
   const t = translations[currentLang];
-  // Check for Admin status
-  const isAdminUser = currentUser?.role === 'admin' || isAdminEmail(currentUser?.email);
 
   return (
     <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 shadow-xs">
@@ -45,7 +43,7 @@ export const Header: React.FC<Props> = ({
           </div>
           <div>
             <div className="font-extrabold text-slate-900 tracking-tight text-base sm:text-lg flex items-center gap-2">
-              IC3 GS6 Portal
+              {t.portalTitle}
             </div>
             <div className="text-[11px] text-slate-500 font-medium hidden sm:block">
               {t.portalSubtitle}
@@ -74,31 +72,6 @@ export const Header: React.FC<Props> = ({
               EN
             </button>
           </div>
-
-          {/* Admin Panel Button (ONLY for Admin) */}
-          {isAdminUser && (
-            <button
-              onClick={() => onToggleViewMode(viewMode === 'admin' ? 'student' : 'admin')}
-              className={`text-xs sm:text-sm font-bold py-2 px-3 sm:px-4 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-xs ${
-                viewMode === 'admin'
-                  ? 'bg-amber-50 text-amber-900 border border-amber-300/80 hover:bg-amber-100'
-                  : 'bg-sky-600 hover:bg-sky-700 text-white shadow-sky-600/20 shadow-md'
-              }`}
-            >
-              {viewMode === 'admin' ? (
-                <>
-                  <BookOpen className="w-4 h-4 text-amber-700" />
-                  <span className="hidden sm:inline">{t.backToTests}</span>
-                  <span className="sm:hidden">{t.tests}</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4 text-amber-300" />
-                  <span className="hidden sm:inline">{t.openAdmin}</span>
-                </>
-              )}
-            </button>
-          )}
 
           {/* User Profile / Auth State */}
           {currentUser ? (

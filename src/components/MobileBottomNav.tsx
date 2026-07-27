@@ -30,7 +30,7 @@ export const MobileBottomNav: React.FC<Props> = ({
   const isAdminUser = currentUser?.role === 'admin' || isAdminEmail(currentUser?.email);
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 z-40 px-3 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around">
+    <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 z-40 px-3 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-around sm:justify-center sm:gap-12">
       {/* Testlar / Main Student View */}
       <button
         type="button"

@@ -196,7 +196,7 @@ export const AdminPanel: React.FC<Props> = ({
               <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Boshqaruv Boshqaruvi (Admin Panel)
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              IC3 GS6 Boshqaruv Markazi
+              UniTest Boshqaruv Markazi
             </h1>
             <p className="text-xs text-slate-500 mt-1">
               Foydalanuvchilar statistikasi, savollar bazasi va AI PDF tahlil vositasi.

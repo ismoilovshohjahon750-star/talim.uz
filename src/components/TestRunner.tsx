@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile, isAdminEmail, getNormalizedSubject } from '../types';
 import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers, ChevronLeft, ChevronRight, Dna, Laptop, Zap, FlaskConical, ChevronUp, ChevronDown } from 'lucide-react';
-import logoImg from '../assets/images/ic3_portal_logo_1785040670797.jpg';
 import { Language, translations } from '../lib/i18n';
 
 interface Props {
@@ -267,12 +266,9 @@ export const TestRunner: React.FC<Props> = ({
           <div className="absolute inset-0 bg-girikh-pattern opacity-10 pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-start gap-4 sm:gap-5">
-              <img
-                src={logoImg}
-                alt="IC3 GS6 Logo"
-                referrerPolicy="no-referrer"
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl object-cover border-2 border-amber-400/50 shadow-2xl shrink-0 hidden sm:block bg-slate-900"
-              />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white border-2 border-sky-300/40 shadow-2xl shrink-0 hidden sm:flex">
+                <Award className="w-9 h-9 sm:w-11 sm:h-11 text-amber-300 drop-shadow-md" />
+              </div>
               <div>
                 <div className="inline-flex items-center gap-1.5 bg-sky-500/20 text-sky-100 font-bold px-3 py-1 rounded-full text-xs mb-2.5 border border-sky-300/30 backdrop-blur-xs">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -300,25 +296,7 @@ export const TestRunner: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Language Switcher */}
-            <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 flex items-center gap-1 self-stretch md:self-auto justify-center shrink-0">
-              <button
-                onClick={() => setLang('uz')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 active:scale-95 ${
-                  lang === 'uz' ? 'bg-white text-sky-900 shadow-md' : 'text-white hover:bg-white/10'
-                }`}
-              >
-                <Globe className="w-3.5 h-3.5 text-sky-600" /> O'zbekcha
-              </button>
-              <button
-                onClick={() => setLang('en')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 active:scale-95 ${
-                  lang === 'en' ? 'bg-white text-sky-900 shadow-md' : 'text-white hover:bg-white/10'
-                }`}
-              >
-                <Globe className="w-3.5 h-3.5 text-sky-600" /> English
-              </button>
-            </div>
+
           </div>
         </div>
 
