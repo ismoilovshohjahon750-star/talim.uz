@@ -1,7 +1,6 @@
 import React from 'react';
 import { UserProfile, isAdminEmail } from '../types';
-import { ShieldCheck, LogIn, LogOut, BookOpen } from 'lucide-react';
-import logoImg from '../assets/images/ic3_portal_logo_1785040670797.jpg';
+import { ShieldCheck, LogIn, LogOut, BookOpen, Award } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
 interface Props {
@@ -39,12 +38,9 @@ export const Header: React.FC<Props> = ({
           className="flex items-center gap-3 cursor-pointer group"
         >
           <div className="relative">
-            <img
-              src={logoImg}
-              alt="IC3 GS6 Logo"
-              referrerPolicy="no-referrer"
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover border-2 border-sky-500/30 shadow-md group-hover:scale-105 transition-transform duration-200 bg-slate-900"
-            />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20 group-hover:scale-105 transition-transform duration-200">
+              <Award className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
+            </div>
             <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
           </div>
           <div>
