@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -38,17 +39,43 @@ export const GoogleAuthModal: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const resetState = () => {
     setError(null);
     setSuccessMsg(null);
+    setVerificationEmail(null);
   };
 
   const switchMode = (newMode: AuthMode) => {
     resetState();
     setMode(newMode);
+  };
+
+  // Resend Verification Email handler
+  const handleResendVerification = async () => {
+    setLoading(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        setSuccessMsg(`Tasdiqlash kodi/xabari ${auth.currentUser.email} manziliga qayta yuborildi! Pochtangizni tekshiring.`);
+      } else {
+        setError("Pochtangizni tasdiqlash uchun qayta tizimga kiring.");
+      }
+    } catch (err: any) {
+      console.error('Resend verification error:', err);
+      if (err.code === 'auth/too-many-requests') {
+        setError("Juda ko'p so'rov yuborildi. Bir ozdan so'ng qayta urinib ko'ring.");
+      } else {
+        setError("Xabarni qayta yuborishda xatolik yuz berdi.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper to ensure user document in Firestore
@@ -120,13 +147,21 @@ export const GoogleAuthModal: React.FC<Props> = ({
       const res = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(res.user, { displayName: name });
 
-      const profile = await syncUserProfile(res.user.uid, email, name);
-      onLogin(profile);
-      onClose();
+      // Send verification email automatically
+      try {
+        await sendEmailVerification(res.user);
+      } catch (vErr) {
+        console.error("Verification email send error:", vErr);
+      }
+
+      await syncUserProfile(res.user.uid, email, name);
+
+      setVerificationEmail(email);
+      setSuccessMsg(`Muvaffaqiyatli ro'yxatdan o'tdingiz! Tasdiqlash xabari va kodi ${email} manziliga yuborildi. Iltimos, pochtangizni tekshiring va havolani bosib pochtangizni tasdiqlang.`);
     } catch (err: any) {
       console.error('Sign Up Error:', err);
       if (err.code === 'auth/email-already-in-use') {
-        setError("Bu elektron pochta allaqachon ro'yxatdan o'tgan. Kirish bo'limiga o'ting.");
+        setError(`Bu elektron pochta (${email}) allaqachon ro'yxatdan o'tgan. Agar avval ro'yxatdan o'tgan yoki Google bilan kirgan bo'lsangiz, 'Tizimga kirish' bo'limiga o'ting yoki parolingizni tiklang.`);
       } else if (err.code === 'auth/invalid-email') {
         setError("Noto'g'ri elektron pochta formati");
       } else if (err.code === 'auth/weak-password') {
@@ -152,6 +187,16 @@ export const GoogleAuthModal: React.FC<Props> = ({
     try {
       const res = await signInWithEmailAndPassword(auth, email, password);
       const user = res.user;
+
+      // Check if email is verified
+      await user.reload();
+      if (!user.emailVerified) {
+        setVerificationEmail(user.email || email);
+        setError(`Elektron pochtangiz (${user.email || email}) hali tasdiqlanmagan. Iltimos, pochtangizga yuborilgan tasdiqlash havolasini bosing.`);
+        setLoading(false);
+        return;
+      }
+
       const profile = await syncUserProfile(
         user.uid,
         user.email || email,
@@ -162,7 +207,7 @@ export const GoogleAuthModal: React.FC<Props> = ({
     } catch (err: any) {
       console.error('Sign In Error:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError("Elektron pochta yoki parol noto'g'ri kiritildi");
+        setError("Elektron pochta yoki parol noto'g'ri kiritildi. Agar Google orqali ro'yxatdan o'tgan bo'lsangiz, 'Google orqali kirish' tugmasini bosing yoki parolingizni tiklang.");
       } else if (err.code === 'auth/invalid-email') {
         setError("Noto'g'ri elektron pochta manzil kiritildi");
       } else {
@@ -253,9 +298,40 @@ export const GoogleAuthModal: React.FC<Props> = ({
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-700">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col gap-2 text-xs text-rose-800 leading-relaxed">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+            {mode === 'sign-up' && error.includes("allaqachon") && (
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => switchMode('sign-in')}
+                  className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-xs transition active:scale-95 text-[11px]"
+                >
+                  Tizimga kirish bo'limiga o'tish →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode('forgot-password')}
+                  className="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg transition active:scale-95 text-[11px]"
+                >
+                  Parolni tiklash
+                </button>
+              </div>
+            )}
+            {mode === 'sign-in' && (error.includes("noto'g'ri") || error.includes("invalid-credential")) && (
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => switchMode('forgot-password')}
+                  className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-xs transition active:scale-95 text-[11px]"
+                >
+                  Parolni tiklash / yangi parol yaratish →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -264,6 +340,27 @@ export const GoogleAuthModal: React.FC<Props> = ({
           <div className="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2 text-xs text-emerald-800 leading-relaxed">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Verification Info / Resend Action */}
+        {verificationEmail && (
+          <div className="mb-4 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col gap-2 text-xs text-amber-900 leading-relaxed">
+            <div className="flex items-center gap-2 font-bold text-amber-800">
+              <Mail className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Elektron pochtani tasdiqlash:</span>
+            </div>
+            <p>
+              Xabar <strong>{verificationEmail}</strong> manziliga yuborilgan. Xabardagi havolani bosganingizdan so'ng tizimga kirishingiz mumkin.
+            </p>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={loading}
+              className="mt-1 self-start px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-xs transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5 text-xs"
+            >
+              <Mail className="w-3.5 h-3.5" /> Tasdiqlash xabarini qayta yuborish
+            </button>
           </div>
         )}
 

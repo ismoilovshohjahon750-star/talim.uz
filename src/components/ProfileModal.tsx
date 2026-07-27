@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { UserProfile, UserAttempt, TestModule, isAdminEmail } from '../types';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import {
   X,
   LogOut,
@@ -15,6 +17,7 @@ import {
   Unlock,
   TrendingUp,
   RotateCcw,
+  Key,
 } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
@@ -41,7 +44,27 @@ export const ProfileModal: React.FC<Props> = ({
   onToggleViewMode,
   lang = 'uz',
 }) => {
+  const [pwdResetLoading, setPwdResetLoading] = useState(false);
+  const [pwdResetSent, setPwdResetSent] = useState(false);
+  const [pwdResetError, setPwdResetError] = useState<string | null>(null);
+
   if (!isOpen || !currentUser) return null;
+
+  const handleSendPasswordReset = async () => {
+    if (!currentUser.email) return;
+    setPwdResetLoading(true);
+    setPwdResetError(null);
+    setPwdResetSent(false);
+    try {
+      await sendPasswordResetEmail(auth, currentUser.email);
+      setPwdResetSent(true);
+    } catch (err: any) {
+      console.error('Password reset error in profile:', err);
+      setPwdResetError("Xabarni yuborishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
+    } finally {
+      setPwdResetLoading(false);
+    }
+  };
 
   const currentLang = (lang && translations[lang]) ? lang : 'uz';
   const t = translations[currentLang];
@@ -155,6 +178,39 @@ export const ProfileModal: React.FC<Props> = ({
                 <div className="text-[11px] text-purple-700 font-medium mt-0.5">{t.metricUnlockedModules}</div>
               </div>
             </div>
+          </div>
+
+          {/* Email / Password Setup Card */}
+          <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0 font-bold">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-800">Email va parol bilan kirish</div>
+                  <div className="text-[10px] text-slate-500">Google profilingizga parol o'rnatish</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleSendPasswordReset}
+                disabled={pwdResetLoading}
+                className="text-xs font-bold text-sky-700 hover:text-sky-800 bg-sky-100 hover:bg-sky-200/80 border border-sky-300/60 px-3 py-1.5 rounded-xl transition active:scale-95 disabled:opacity-50 shrink-0"
+              >
+                {pwdResetLoading ? "Yuborilmoqda..." : "Parol o'rnatish linkini olish"}
+              </button>
+            </div>
+            {pwdResetSent && (
+              <p className="text-[11px] text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 leading-normal">
+                ✓ Parol o'rnatish havolasi <strong>{currentUser.email}</strong> manziliga yuborildi. Pochtadagi havolani bosib parol belgilasangiz, kelgusida ushbu email va parolingiz bilan ham tizimga kirsangiz bo'ladi!
+              </p>
+            )}
+            {pwdResetError && (
+              <p className="text-[11px] text-red-700 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                {pwdResetError}
+              </p>
+            )}
           </div>
 
           {/* Admin Switch Quick Action Banner (If Admin) */}
