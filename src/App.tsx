@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
+import { ProfileModal } from './components/ProfileModal';
 import { TestRunner } from './components/TestRunner';
 import { AdminPanel } from './components/AdminPanel';
 import { TestModule, UserProfile, UserAttempt, isAdminEmail } from './types';
+import { Language } from './lib/i18n';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
@@ -21,7 +24,10 @@ import {
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'student' | 'admin'>('student');
+  const [isTestActive, setIsTestActive] = useState<boolean>(false);
+  const [lang, setLang] = useState<Language>('uz');
 
   const [modules, setModules] = useState<TestModule[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -251,13 +257,16 @@ export function App() {
       <Header
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
         onLogout={handleLogout}
         viewMode={viewMode}
         onToggleViewMode={(mode) => setViewMode(mode)}
+        lang={lang}
+        onLangChange={setLang}
       />
 
       {/* Main View Area */}
-      <main className="flex-1 py-6">
+      <main className="flex-1 py-4 sm:py-6 pb-20 md:pb-8">
         {viewMode === 'admin' ? (
           <AdminPanel
             currentUser={currentUser}
@@ -273,9 +282,36 @@ export function App() {
             onSaveAttempt={handleSaveAttempt}
             onUnlockTest={handleUnlockTest}
             onOpenAuth={() => setIsAuthOpen(true)}
+            onTestActiveChange={(active) => setIsTestActive(active)}
+            lang={lang}
+            onLangChange={setLang}
           />
         )}
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        viewMode={viewMode}
+        onToggleViewMode={(mode) => setViewMode(mode)}
+        isTestActive={isTestActive}
+        lang={lang}
+      />
+
+      {/* Profile Modal Menu */}
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        currentUser={currentUser}
+        attempts={attempts}
+        modules={modules}
+        onLogout={handleLogout}
+        viewMode={viewMode}
+        onToggleViewMode={(mode) => setViewMode(mode)}
+        lang={lang}
+      />
 
       {/* Google & Firebase Auth Modal */}
       <GoogleAuthModal
@@ -288,6 +324,7 @@ export function App() {
             setViewMode('admin');
           }
         }}
+        lang={lang}
       />
 
       {/* Footer */}

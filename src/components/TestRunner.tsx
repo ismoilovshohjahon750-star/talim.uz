@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile, isAdminEmail, getNormalizedSubject } from '../types';
 import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers, ChevronLeft, ChevronRight, Dna, Laptop, Zap, FlaskConical, ChevronUp, ChevronDown } from 'lucide-react';
+import logoImg from '../assets/images/ic3_portal_logo_1785040670797.jpg';
+import { Language, translations } from '../lib/i18n';
 
 interface Props {
   modules: TestModule[];
@@ -8,6 +10,9 @@ interface Props {
   onSaveAttempt: (testId: string, testTitle: string, score: number, total: number) => void;
   onUnlockTest?: (testId: string) => void;
   onOpenAuth?: () => void;
+  onTestActiveChange?: (active: boolean) => void;
+  lang?: Language;
+  onLangChange?: (lang: Language) => void;
 }
 
 export const TestRunner: React.FC<Props> = ({
@@ -16,6 +21,9 @@ export const TestRunner: React.FC<Props> = ({
   onSaveAttempt,
   onUnlockTest,
   onOpenAuth,
+  onTestActiveChange,
+  lang: propLang,
+  onLangChange,
 }) => {
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
@@ -29,10 +37,28 @@ export const TestRunner: React.FC<Props> = ({
       });
     }
   };
-  const [activeModule, setActiveModule] = useState<TestModule | null>(null);
+  const [activeModule, setActiveModuleState] = useState<TestModule | null>(null);
+
+  const setActiveModule = (mod: TestModule | null) => {
+    setActiveModuleState(mod);
+    if (onTestActiveChange) {
+      onTestActiveChange(!!mod);
+    }
+  };
   const [currentQIndex, setCurrentQIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<number, any>>({});
-  const [lang, setLang] = useState<'uz' | 'en'>('uz');
+  const [internalLang, setInternalLang] = useState<Language>('uz');
+  const lang = propLang || internalLang;
+
+  const setLang = (l: Language) => {
+    setInternalLang(l);
+    if (onLangChange) {
+      onLangChange(l);
+    }
+  };
+
+  const currentLang = (lang && translations[lang]) ? lang : 'uz';
+  const t = translations[currentLang];
   const [isFinished, setIsFinished] = useState<boolean>(false);
 
   // Payment Modal State
@@ -65,6 +91,16 @@ export const TestRunner: React.FC<Props> = ({
     return matchesSubject && matchesLevel;
   });
 
+  // Fisher-Yates array shuffle algorithm
+  const shuffleArray = <T,>(arr: T[]): T[] => {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const startTest = (module: TestModule) => {
     if (!isModuleUnlocked(module)) {
       if (!currentUser) {
@@ -79,7 +115,25 @@ export const TestRunner: React.FC<Props> = ({
       return;
     }
 
-    setActiveModule(module);
+    // Always fetch fresh original module questions from modules array
+    const originalModule = modules.find((m) => m.id === module.id) || module;
+    const rawQuestions = originalModule.questions || [];
+
+    // Shuffle question order & option order for every user/session
+    const shuffledQuestions = shuffleArray<Question>(rawQuestions).map((q: Question) => {
+      if ((q.type === 'single' || q.type === 'multi') && q.opts && q.opts.length > 0) {
+        return {
+          ...q,
+          opts: shuffleArray<QuestionOption>(q.opts),
+        };
+      }
+      return q;
+    });
+
+    setActiveModule({
+      ...originalModule,
+      questions: shuffledQuestions,
+    });
     setCurrentQIndex(0);
     setAnswers({});
     setIsFinished(false);
@@ -209,37 +263,60 @@ export const TestRunner: React.FC<Props> = ({
     return (
       <div className="wrap">
         {/* Hero Section */}
-        <div className="hero">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-indigo-500/30 text-indigo-100 font-semibold px-3 py-1 rounded-full text-xs mb-3 border border-indigo-400/30">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" /> IC3 GS6 Raqamli Savodxonlik
+        <div className="hero bg-gradient-to-br from-sky-700 via-sky-600 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden mb-6 border border-sky-500/20">
+          <div className="absolute inset-0 bg-girikh-pattern opacity-10 pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-start gap-4 sm:gap-5">
+              <img
+                src={logoImg}
+                alt="IC3 GS6 Logo"
+                referrerPolicy="no-referrer"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl object-cover border-2 border-amber-400/50 shadow-2xl shrink-0 hidden sm:block bg-slate-900"
+              />
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-sky-500/20 text-sky-100 font-bold px-3 py-1 rounded-full text-xs mb-2.5 border border-sky-300/30 backdrop-blur-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <span>{t.heroBadge}</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
+                  {t.heroTitle}
+                </h1>
+                <p className="text-sky-100/90 text-xs sm:text-sm mt-2 max-w-2xl leading-relaxed font-normal">
+                  {t.heroSubtitle}
+                </p>
+
+                {/* Quick Stat Badges */}
+                <div className="flex items-center gap-3 mt-4 flex-wrap text-xs font-semibold">
+                  <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-xl border border-white/15 text-sky-100 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-amber-400" /> {(t.modulesCountBadge || '{count} Test Modules').replace('{count}', String(modules.length))}
+                  </span>
+                  <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-xl border border-white/15 text-sky-100 flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> {t.gs6Badge}
+                  </span>
+                  <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-xl border border-white/15 text-sky-100 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> {t.aiAnalysisBadge}
+                  </span>
+                </div>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-                Raqamli Ko'nikmalar Imtihon Portaliga Xush Kelibsiz
-              </h1>
-              <p className="text-indigo-100/90 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
-                Global standartlarga mos IC3 GS6 test savollarini o'zbek va ingliz tillarida yechib, bilimingizni sinab ko'ring va natijalaringizni kuzatib boring.
-              </p>
             </div>
 
             {/* Language Switcher */}
-            <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 flex items-center gap-1 self-stretch md:self-auto justify-center">
+            <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 flex items-center gap-1 self-stretch md:self-auto justify-center shrink-0">
               <button
                 onClick={() => setLang('uz')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-                  lang === 'uz' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 active:scale-95 ${
+                  lang === 'uz' ? 'bg-white text-sky-900 shadow-md' : 'text-white hover:bg-white/10'
                 }`}
               >
-                <Globe className="w-3.5 h-3.5" /> O'zbekcha
+                <Globe className="w-3.5 h-3.5 text-sky-600" /> O'zbekcha
               </button>
               <button
                 onClick={() => setLang('en')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-                  lang === 'en' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 active:scale-95 ${
+                  lang === 'en' ? 'bg-white text-sky-900 shadow-md' : 'text-white hover:bg-white/10'
                 }`}
               >
-                <Globe className="w-3.5 h-3.5" /> English
+                <Globe className="w-3.5 h-3.5 text-sky-600" /> English
               </button>
             </div>
           </div>
@@ -250,8 +327,8 @@ export const TestRunner: React.FC<Props> = ({
           {/* Main Subject Tabs */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-extrabold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-indigo-600" /> Fanlar Bo'limi (Subject Section):
+              <div className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-sky-600" /> {t.subjectsSection}:
               </div>
 
               {/* Navigation buttons: Orqaga / Oldinga */}
@@ -259,20 +336,20 @@ export const TestRunner: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => scrollSubject('left')}
-                  title="Orqaga otkazish"
-                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-indigo-50 border border-gray-200 text-gray-700 hover:text-indigo-600 text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95"
+                  title={t.scrollLeft}
+                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 border border-slate-200 text-slate-700 hover:text-sky-600 text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95"
                 >
-                  <ChevronLeft className="w-4 h-4 text-indigo-600" />
-                  <span className="hidden sm:inline">Orqaga</span>
+                  <ChevronLeft className="w-4 h-4 text-sky-600" />
+                  <span className="hidden sm:inline">{t.scrollLeft}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollSubject('right')}
-                  title="Oldinga otkazish"
-                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-indigo-50 border border-gray-200 text-gray-700 hover:text-indigo-600 text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95"
+                  title={t.scrollRight}
+                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 border border-slate-200 text-slate-700 hover:text-sky-600 text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95"
                 >
-                  <span className="hidden sm:inline">Oldinga</span>
-                  <ChevronRight className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">{t.scrollRight}</span>
+                  <ChevronRight className="w-4 h-4 text-sky-600" />
                 </button>
               </div>
             </div>
@@ -284,13 +361,13 @@ export const TestRunner: React.FC<Props> = ({
               >
                 <button
                   onClick={() => setSelectedSubject('all')}
-                  className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border shrink-0 ${
+                  className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border shrink-0 active:scale-95 ${
                     selectedSubject === 'all'
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      ? 'bg-sky-600 text-white border-sky-600 shadow-md shadow-sky-600/20'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  <Layers className="w-3.5 h-3.5" /> Barcha Fanlar ({modules.length})
+                  <Layers className="w-3.5 h-3.5" /> {(t.allSubjects || 'All Subjects ({count})').replace('{count}', String(modules.length))}
                 </button>
                 {allKnownSubjects.map((sub) => {
                   const subCount = modules.filter((m) => getNormalizedSubject(m).toLowerCase() === sub.toLowerCase()).length;
@@ -298,10 +375,10 @@ export const TestRunner: React.FC<Props> = ({
                     <button
                       key={sub}
                       onClick={() => setSelectedSubject(sub)}
-                      className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border shrink-0 ${
+                      className={`px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 border shrink-0 active:scale-95 ${
                         selectedSubject.toLowerCase() === sub.toLowerCase()
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                          ? 'bg-sky-600 text-white border-sky-600 shadow-md shadow-sky-600/20'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <span>
@@ -319,7 +396,7 @@ export const TestRunner: React.FC<Props> = ({
                       </span>
                       <span>{sub}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                        selectedSubject.toLowerCase() === sub.toLowerCase() ? 'bg-indigo-800 text-indigo-100' : 'bg-gray-100 text-gray-600'
+                        selectedSubject.toLowerCase() === sub.toLowerCase() ? 'bg-sky-800 text-sky-100' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {subCount}
                       </span>
@@ -331,47 +408,47 @@ export const TestRunner: React.FC<Props> = ({
           </div>
 
           {/* Level Filter Sub-pills */}
-          <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs p-1.5 rounded-2xl border border-gray-200 shadow-2xs w-fit flex-wrap">
-            <span className="text-[11px] font-bold text-gray-500 px-2">Daraja:</span>
+          <div className="flex items-center gap-2 bg-white/90 backdrop-blur-xs p-1.5 rounded-2xl border border-slate-200 shadow-2xs w-fit flex-wrap">
+            <span className="text-[11px] font-bold text-slate-500 px-2">{t.levelFilterLabel}:</span>
             <button
               onClick={() => setSelectedLevel('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
                 selectedLevel === 'all'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-sky-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Barchasi
+              {t.levelAll}
             </button>
             <button
               onClick={() => setSelectedLevel('level 1')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
                 selectedLevel === 'level 1'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-sky-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              1-Modul (Oson)
+              {t.levelEasy}
             </button>
             <button
               onClick={() => setSelectedLevel('level 2')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
                 selectedLevel === 'level 2'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-sky-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              2-Modul (O'rta)
+              {t.levelMedium}
             </button>
             <button
               onClick={() => setSelectedLevel('level 3')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
                 selectedLevel === 'level 3'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-sky-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              3-Modul (Yuqori)
+              {t.levelHard}
             </button>
           </div>
         </div>
@@ -382,9 +459,9 @@ export const TestRunner: React.FC<Props> = ({
             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <HelpCircle className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Hozircha mos testlar topilmadi</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{t.noTestsFoundTitle}</h3>
             <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-              Tanlangan fan yoki daraja bo'yicha hali test modullari yuklanmagan. Admin panel orqali yangi testlarni yuklashingiz mumkin.
+              {t.noTestsFoundSub}
             </p>
           </div>
         ) : (
@@ -428,16 +505,16 @@ export const TestRunner: React.FC<Props> = ({
                       {m.isPaid ? (
                         unlocked ? (
                           <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1 border border-emerald-200">
-                            <Unlock className="w-3.5 h-3.5 text-emerald-600" /> Ochilgan (${m.price || 5})
+                            <Unlock className="w-3.5 h-3.5 text-emerald-600" /> {t.unlockedBadge} (${m.price || 5})
                           </span>
                         ) : (
                           <span className="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full flex items-center gap-1 border border-amber-300 shadow-2xs">
-                            <Lock className="w-3.5 h-3.5 text-amber-600" /> Pullik (${m.price || 5})
+                            <Lock className="w-3.5 h-3.5 text-amber-600" /> {t.paidBadge} (${m.price || 5})
                           </span>
                         )
                       ) : (
                         <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100">
-                          Bepul
+                          {t.freeBadge}
                         </span>
                       )}
                     </div>
@@ -446,23 +523,23 @@ export const TestRunner: React.FC<Props> = ({
                       {m.title}
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      IC3 GS6 standartlari bo'yicha tayyorlangan {(m.questions || []).length} ta amaliy va nazariy savollar to'plami.
+                      {(t.cardQuestionCountDesc || '{count} questions').replace('{count}', String((m.questions || []).length))}
                     </p>
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
                     {m.isPaid && !unlocked ? (
                       <span className="text-xs font-bold text-amber-700 group-hover:translate-x-1 transition flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5" /> Xarid qilish (${m.price || 5}.00)
+                        <Lock className="w-3.5 h-3.5" /> {t.purchaseBtn} (${m.price || 5}.00)
                       </span>
                     ) : (
                       <span className="text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition flex items-center gap-1">
-                        Testni boshlash <ArrowRight className="w-4 h-4" />
+                        {t.startTestBtn} <ArrowRight className="w-4 h-4" />
                       </span>
                     )}
 
                     <span className="text-[11px] text-gray-400 font-semibold">
-                      {(m.questions || []).length} ta savol
+                      {(t.questionsCountTag || '{count} questions').replace('{count}', String((m.questions || []).length))}
                     </span>
                   </div>
                 </div>
@@ -473,36 +550,38 @@ export const TestRunner: React.FC<Props> = ({
 
         {/* Payment & Unlock Modal */}
         {paymentModalModule && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-gray-200 shadow-2xl relative">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-100 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+              {/* Mobile Handle */}
+              <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto -mt-2 mb-4" />
               <div className="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200 shadow-xs">
                 <Lock className="w-7 h-7" />
               </div>
 
               <div className="text-center mb-6">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-200 inline-flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" /> Premium Test Moduli
+                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" /> {t.premiumTestBadge}
                 </span>
                 <h3 className="text-xl font-extrabold text-gray-900 mt-2">
                   {paymentModalModule.title}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  Ushbu test {paymentModalModule.questions.length} ta savoldan iborat bo'lib, administratorlar tomonidan pullik qilingan.
+                  {(t.paidTestDesc || '{count} questions').replace('{count}', String(paymentModalModule.questions.length))}
                 </p>
               </div>
 
               <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 mb-6 space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold text-gray-600">Test narxi:</span>
+                  <span className="font-semibold text-gray-600">{t.priceLabel}:</span>
                   <span className="text-2xl font-black text-amber-600">${paymentModalModule.price || 5}.00 USD</span>
                 </div>
                 <div className="text-xs text-gray-600 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Barcha savollar va kalit javoblar tahlili</span>
+                  <span>{t.benefit1}</span>
                 </div>
                 <div className="text-xs text-gray-600 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Bir marta to'lab, cheksiz kirish huquqini oling</span>
+                  <span>{t.benefit2}</span>
                 </div>
               </div>
 
@@ -518,10 +597,7 @@ export const TestRunner: React.FC<Props> = ({
                       setPaymentModalModule(null);
                       setIsProcessingPayment(false);
                       if (unlockedModule) {
-                        setActiveModule(unlockedModule);
-                        setCurrentQIndex(0);
-                        setAnswers({});
-                        setIsFinished(false);
+                        startTest(unlockedModule);
                       }
                     }, 700);
                   }}
@@ -530,11 +606,11 @@ export const TestRunner: React.FC<Props> = ({
                 >
                   {isProcessingPayment ? (
                     <>
-                      <Sparkles className="w-4 h-4 animate-spin text-amber-200" /> To'lov amalga oshirilmoqda...
+                      <Sparkles className="w-4 h-4 animate-spin text-amber-200" /> {t.processingPayment}
                     </>
                   ) : (
                     <>
-                      <CreditCard className="w-4 h-4" /> Hozir To'lash va Ochish (${paymentModalModule.price || 5}.00)
+                      <CreditCard className="w-4 h-4" /> {t.payNowBtn} (${paymentModalModule.price || 5}.00)
                     </>
                   )}
                 </button>
@@ -543,7 +619,7 @@ export const TestRunner: React.FC<Props> = ({
                   onClick={() => setPaymentModalModule(null)}
                   className="w-full btn btn-secondary py-3 rounded-2xl text-xs font-semibold"
                 >
-                  Yopish
+                  {t.closeBtn}
                 </button>
               </div>
             </div>
@@ -568,29 +644,29 @@ export const TestRunner: React.FC<Props> = ({
           </div>
 
           <h2 className="text-3xl font-extrabold text-gray-900 inline-flex items-center justify-center gap-2 flex-wrap">
-            <span>{isPassed ? "Tabriklaymiz! Test Muvaffaqiyatli Topshirildi" : "Kechirasiz, Natija Etarli Emas"}</span>
+            <span>{isPassed ? t.resultsPassTitle : t.resultsFailTitle}</span>
             {isPassed && <Sparkles className="w-7 h-7 text-amber-500 inline" />}
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            {activeModule.title} — Imtihon natijalari
+            {activeModule.title} — {t.examResultsSub}
           </p>
 
           <div className="grid grid-cols-3 gap-4 max-w-md mx-auto my-6 p-4 bg-gray-50 rounded-2xl border border-gray-200">
             <div>
               <div className="text-2xl font-black text-gray-900">{score}/{total}</div>
-              <div className="text-xs text-gray-500 font-medium">To'g'ri javoblar</div>
+              <div className="text-xs text-gray-500 font-medium">{t.correctAnswersLabel}</div>
             </div>
             <div>
               <div className={`text-2xl font-black ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {percent}%
               </div>
-              <div className="text-xs text-gray-500 font-medium">Foiz darajasi</div>
+              <div className="text-xs text-gray-500 font-medium">{t.percentageLabel}</div>
             </div>
             <div>
               <div className="text-2xl font-black text-indigo-600">
-                {isPassed ? "O'TDI" : "YIQILDI"}
+                {isPassed ? t.statusPassed : t.statusFailed}
               </div>
-              <div className="text-xs text-gray-500 font-medium">Status</div>
+              <div className="text-xs text-gray-500 font-medium">{t.statusLabel}</div>
             </div>
           </div>
 
@@ -599,20 +675,20 @@ export const TestRunner: React.FC<Props> = ({
               onClick={() => startTest(activeModule)}
               className="btn btn-primary py-2.5 px-6 text-sm"
             >
-              <RotateCcw className="w-4 h-4" /> Qayta topshirish
+              <RotateCcw className="w-4 h-4" /> {t.retakeBtn}
             </button>
             <button
               onClick={() => setActiveModule(null)}
               className="btn btn-secondary py-2.5 px-6 text-sm"
             >
-              Testlar ro'yxatiga qaytish
+              {t.backToTestsBtn}
             </button>
           </div>
         </div>
 
         {/* Detailed Question Review */}
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          Savollar va Natijalar Tahlili:
+          {t.questionsReviewTitle}
         </h3>
 
         <div className="space-y-6">
@@ -636,11 +712,11 @@ export const TestRunner: React.FC<Props> = ({
                   </div>
                   {correct ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> To'g'ri
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t.correctTag}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-bold bg-rose-100 text-rose-800 px-3 py-1 rounded-full">
-                      <XCircle className="w-4 h-4 text-rose-600" /> Noto'g'ri
+                      <XCircle className="w-4 h-4 text-rose-600" /> {t.incorrectTag}
                     </span>
                   )}
                 </div>
@@ -693,12 +769,12 @@ export const TestRunner: React.FC<Props> = ({
           onClick={() => setActiveModule(null)}
           className="text-xs font-semibold text-gray-500 hover:text-gray-900 flex items-center gap-1"
         >
-          <ArrowLeft className="w-4 h-4" /> Chiqish
+          <ArrowLeft className="w-4 h-4" /> {t.exitBtn}
         </button>
 
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-gray-900">
-            Savol {currentQIndex + 1} / {questionsList.length}
+            {(t.questionLabel || 'Question {current} / {total}').replace('{current}', String(currentQIndex + 1)).replace('{total}', String(questionsList.length))}
           </span>
           <div className="w-32 bg-gray-200 h-2 rounded-full overflow-hidden">
             <div
@@ -723,11 +799,11 @@ export const TestRunner: React.FC<Props> = ({
       <div className="qcard shadow-md">
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-            {currentQ.type === 'single' && "Bitta to'g'ri javobni tanlang"}
-            {currentQ.type === 'multi' && `Bir nechta to'g'ri javobni tanlang (${currentQ.need || 2} ta)`}
-            {currentQ.type === 'yn' && "Ha / Yo'q (To'g'ri / Noto'g'ri) baholang"}
-            {currentQ.type === 'match' && "Tushunchalar va ta'riflarni moslang"}
-            {currentQ.type === 'order' && "Bosqichlarni to'g'ri ketma-ketlikda joylashtiring"}
+            {currentQ.type === 'single' && t.qtypeSingle}
+            {currentQ.type === 'multi' && (t.qtypeMulti || 'Select multiple ({need})').replace('{need}', String(currentQ.need || 2))}
+            {currentQ.type === 'yn' && t.qtypeYN}
+            {currentQ.type === 'match' && t.qtypeMatch}
+            {currentQ.type === 'order' && t.qtypeOrder}
           </span>
         </div>
 
@@ -813,7 +889,7 @@ export const TestRunner: React.FC<Props> = ({
                           : 'bg-white text-gray-600 border-gray-300 hover:bg-emerald-50'
                       }`}
                     >
-                      HA
+                      {t.yesBtn}
                     </button>
                     <button
                       onClick={() => handleYNSelect(currentQIndex, itemIdx, false)}
@@ -823,7 +899,7 @@ export const TestRunner: React.FC<Props> = ({
                           : 'bg-white text-gray-600 border-gray-300 hover:bg-rose-50'
                       }`}
                     >
-                      YO'Q
+                      {t.noBtn}
                     </button>
                   </div>
                 </div>
@@ -848,7 +924,7 @@ export const TestRunner: React.FC<Props> = ({
                     onChange={(e) => handleMatchSelect(currentQIndex, pairIdx, e.target.value)}
                     className="w-full p-3 border-1.5 border-gray-300 rounded-xl text-sm font-medium focus:border-indigo-600 focus:outline-none bg-white"
                   >
-                    <option value="">-- Ta'rifni tanlang --</option>
+                    <option value="">{t.selectDefinition}</option>
                     {allDefs.map((defText, dIdx) => (
                       <option key={dIdx} value={defText}>
                         {defText}
@@ -865,7 +941,7 @@ export const TestRunner: React.FC<Props> = ({
         {currentQ.type === 'order' && (
           <div className="space-y-2">
             <p className="text-xs text-gray-500 mb-2 font-medium">
-              Tugmachalar yordamida qadamlarni to'g'ri ketma-ketlikka keltiring:
+              {t.orderInstructions}
             </p>
             {(answers[currentQIndex] || currentQ.steps || []).map((step: OrderStep, stepIdx: number) => (
               <div key={stepIdx} className="ostep">
@@ -880,7 +956,7 @@ export const TestRunner: React.FC<Props> = ({
                     disabled={stepIdx === 0}
                     onClick={() => handleOrderMove(currentQIndex, stepIdx, 'up', currentQ.steps || [])}
                     className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30 flex items-center justify-center"
-                    title="Yuqoriga ko'chirish"
+                    title={t.moveUp}
                   >
                     <ChevronUp className="w-4 h-4" />
                   </button>
@@ -888,7 +964,7 @@ export const TestRunner: React.FC<Props> = ({
                     disabled={stepIdx === (answers[currentQIndex] || currentQ.steps || []).length - 1}
                     onClick={() => handleOrderMove(currentQIndex, stepIdx, 'down', currentQ.steps || [])}
                     className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30 flex items-center justify-center"
-                    title="Pastga ko'chirish"
+                    title={t.moveDown}
                   >
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -905,7 +981,7 @@ export const TestRunner: React.FC<Props> = ({
             onClick={() => setCurrentQIndex((prev) => prev - 1)}
             className="btn btn-secondary text-sm disabled:opacity-30"
           >
-            <ArrowLeft className="w-4 h-4" /> Oldingisi
+            <ArrowLeft className="w-4 h-4" /> {t.prevBtn}
           </button>
 
           {isLastQuestion ? (
@@ -913,14 +989,14 @@ export const TestRunner: React.FC<Props> = ({
               onClick={finishTest}
               className="btn btn-success text-sm py-2.5 px-6 shadow-md"
             >
-              <CheckCircle2 className="w-4 h-4" /> Testni Yakunlash
+              <CheckCircle2 className="w-4 h-4" /> {t.finishTestBtn}
             </button>
           ) : (
             <button
               onClick={() => setCurrentQIndex((prev) => prev + 1)}
               className="btn btn-primary text-sm py-2.5 px-6"
             >
-              Keyingisi <ArrowRight className="w-4 h-4" />
+              {t.nextBtn} <ArrowRight className="w-4 h-4" />
             </button>
           )}
         </div>

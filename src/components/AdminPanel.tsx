@@ -189,36 +189,36 @@ export const AdminPanel: React.FC<Props> = ({
   return (
     <div className="wrap animate-fade-in">
       {/* Admin Panel Header & Tabs */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-md mb-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-100">
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm mb-6 sm:mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100 mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Administrative Dashboard
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold bg-sky-50 text-sky-700 px-3 py-1 rounded-full border border-sky-200/80 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Boshqaruv Boshqaruvi (Admin Panel)
             </div>
-            <h1 className="text-2xl font-black text-gray-900">
-              IC3 GS6 Boshqaruv Paneli
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              IC3 GS6 Boshqaruv Markazi
             </h1>
-            <p className="text-xs text-gray-500 mt-1">
-              Foydalanuvchilar statistikasi, savollar bazasi va AI orqali PDF savollarni tahlil qilish.
+            <p className="text-xs text-slate-500 mt-1">
+              Foydalanuvchilar statistikasi, savollar bazasi va AI PDF tahlil vositasi.
             </p>
           </div>
 
           <button
             onClick={onRefreshData}
-            className="btn btn-secondary text-xs py-2 px-3 self-start md:self-auto"
+            className="btn btn-secondary text-xs py-2 px-3.5 self-start md:self-auto rounded-xl active:scale-95"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Ma'lumotlarni yangilash
+            <RefreshCw className="w-3.5 h-3.5" /> Yangilash
           </button>
         </div>
 
         {/* Tab Selection Navigation */}
-        <div className="flex items-center gap-2 mt-6 overflow-x-auto pb-1">
+        <div className="flex items-center gap-2 mt-5 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition active:scale-95 shrink-0 ${
               activeTab === 'users'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             <Users className="w-4 h-4" /> Foydalanuvchilar ({users.length})
@@ -226,13 +226,13 @@ export const AdminPanel: React.FC<Props> = ({
 
           <button
             onClick={() => setActiveTab('questions')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition active:scale-95 shrink-0 ${
               activeTab === 'questions'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <FileText className="w-4 h-4" /> Savollar va Testlar ({modules.length})
+            <FileText className="w-4 h-4" /> Savollar & Testlar ({modules.length})
           </button>
 
           <button
@@ -240,9 +240,9 @@ export const AdminPanel: React.FC<Props> = ({
               setActiveTab('wizard');
               setWizardStep(1);
             }}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition active:scale-95 shrink-0 ${
               activeTab === 'wizard'
-                ? 'bg-indigo-600 text-white shadow-md'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
                 : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
             }`}
           >

@@ -11,11 +11,14 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../lib/firebase';
 import { LogIn, UserPlus, KeyRound, Mail, Lock, User, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+import { Language, translations } from '../lib/i18n';
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onLogin: (user: UserProfile) => void;
   currentUser: UserProfile | null;
+  lang?: Language;
 }
 
 type AuthMode = 'sign-in' | 'sign-up' | 'forgot-password';
@@ -24,7 +27,10 @@ export const GoogleAuthModal: React.FC<Props> = ({
   isOpen,
   onClose,
   onLogin,
+  lang = 'uz',
 }) => {
+  const currentLang = (lang && translations[lang]) ? lang : 'uz';
+  const t = translations[currentLang];
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -195,11 +201,14 @@ export const GoogleAuthModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 relative">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-fade-in">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative max-h-[92vh] overflow-y-auto">
+        {/* Mobile Pull Bar Handle */}
+        <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto -mt-2 mb-4" />
+
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition active:scale-90"
         >
           <X className="w-5 h-5" />
         </button>
