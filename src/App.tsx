@@ -108,14 +108,17 @@ export function App() {
             );
             const existingReqs = await getDocs(q);
             if (existingReqs.empty) {
+              const sEmail = (inviterData.email || '').toLowerCase();
+              const rEmail = (currentUser.email || '').toLowerCase();
               await addDoc(collection(db, 'chatRequests'), {
                 senderUid: inviterId,
                 senderName: inviterData.name || 'Foydalanuvchi',
-                senderEmail: (inviterData.email || '').toLowerCase(),
-                senderAvatar: inviterData.avatar || '',
+                senderEmail: sEmail,
+                senderAvatar: inviterData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(sEmail || inviterId)}`,
                 recipientId: currentUser.id,
-                recipientEmail: (currentUser.email || '').toLowerCase(),
+                recipientEmail: rEmail,
                 recipientName: currentUser.name || '',
+                recipientAvatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(rEmail || currentUser.id)}`,
                 status: 'pending',
                 createdAt: new Date().toISOString(),
                 timestamp: serverTimestamp(),

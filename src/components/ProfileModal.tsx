@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Check,
   Trash2,
+  Camera,
 } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
@@ -106,6 +107,27 @@ export const ProfileModal: React.FC<Props> = ({
     }
   };
 
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Rasm hajmi 5MB dan oshmasligi kerak.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64Data = event.target?.result as string;
+      if (base64Data) {
+        try {
+          await updateDoc(doc(db, 'users', currentUser.id), { avatar: base64Data });
+        } catch (err) {
+          console.warn("Avatar update error:", err);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (!isOpen || !currentUser) return null;
 
   const handleSendPasswordReset = async () => {
@@ -166,12 +188,20 @@ export const ProfileModal: React.FC<Props> = ({
         <div className="relative pt-2 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-4">
             {/* Avatar Circle with Badge */}
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 group">
               <img
                 src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.email)}`}
                 alt={currentUser.name}
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl object-cover border-2 border-sky-500/40 shadow-md bg-sky-50"
               />
+              <label
+                className="absolute inset-0 bg-black/40 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                title="Profil rasmini o'zgartirish"
+              >
+                <Camera className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Rasm yuklash</span>
+                <input type="file" accept="image/*" onChange={handleAvatarFileChange} className="hidden" />
+              </label>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold shadow-xs">
                 ✓
               </div>

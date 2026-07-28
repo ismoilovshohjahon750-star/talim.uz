@@ -58,6 +58,7 @@ import {
   Check,
   Share2,
   UserCheck,
+  Pencil,
 } from 'lucide-react';
 import { Language } from '../lib/i18n';
 
@@ -81,6 +82,7 @@ export interface ChatChannel {
   lastMessageTime?: string;
   unreadCount?: number;
   isVerified?: boolean;
+  avatarUrl?: string;
 }
 
 const CHAT_CHANNELS: ChatChannel[] = [
@@ -91,9 +93,9 @@ const CHAT_CHANNELS: ChatChannel[] = [
     category: 'group',
     icon: <Award className="w-5.5 h-5.5 text-amber-300 drop-shadow-xs" />,
     bgColor: 'bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-600',
-    membersCount: "148 ta a'zo",
-    lastMessageText: "Barchaga salom! Yangi testlar yuklandi 😊",
-    lastMessageTime: '12:45',
+    membersCount: "1 ta a'zo",
+    lastMessageText: "Hozircha xabar yo'q",
+    lastMessageTime: '',
     isVerified: true,
   },
 ];
@@ -269,6 +271,34 @@ export const CommunityChat: React.FC<Props> = ({
   const [searchedUsers, setSearchedUsers] = useState<Array<{ id: string; name: string; email: string; avatar?: string }>>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [invitedUserIds, setInvitedUserIds] = useState<string[]>([]);
+  const [inviteCooldown, setInviteCooldown] = useState<number>(() => {
+    try {
+      const savedEndTime = localStorage.getItem('chat_invite_cooldown_endtime');
+      if (savedEndTime) {
+        const diff = Math.ceil((parseInt(savedEndTime, 10) - Date.now()) / 1000);
+        return diff > 0 ? diff : 0;
+      }
+    } catch {
+      // ignore
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    if (inviteCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setInviteCooldown((prev) => {
+        if (prev <= 1) {
+          try {
+            localStorage.removeItem('chat_invite_cooldown_endtime');
+          } catch {}
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [inviteCooldown]);
 
   // Real-time or query search for registered users in Firestore
   useEffect(() => {
@@ -306,8 +336,13 @@ export const CommunityChat: React.FC<Props> = ({
       });
   }, [inviteInput]);
 
-  const handleSendInvite = async (targetUser?: { id: string; name: string; email: string }) => {
-    let recipientUser = targetUser;
+  const handleSendInvite = async (targetUser?: { id: string; name: string; email: string; avatar?: string }) => {
+    if (inviteCooldown > 0) {
+      alert(`Qayta taklif yuborish uchun ${inviteCooldown} sekunt kuting!`);
+      return;
+    }
+
+    let recipientUser: { id: string; name: string; email: string; avatar?: string } | undefined = targetUser;
     const inputVal = inviteInput.trim();
     if (!recipientUser && inputVal) {
       const found = searchedUsers.find(u => u.email.toLowerCase() === inputVal.toLowerCase() || u.name.toLowerCase() === inputVal.toLowerCase());
@@ -380,14 +415,17 @@ export const CommunityChat: React.FC<Props> = ({
 
     if (recipientUser && currentUser) {
       try {
+        const sEmail = (currentUser.email || '').toLowerCase();
+        const rEmail = (recipientUser.email || '').toLowerCase();
         await addDoc(collection(db, 'chatRequests'), {
           senderUid: currentUser.id,
           senderName: currentUser.name,
-          senderEmail: (currentUser.email || '').toLowerCase(),
-          senderAvatar: currentUser.avatar || '',
+          senderEmail: sEmail,
+          senderAvatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(sEmail || currentUser.id)}`,
           recipientId: recipientUser.id,
-          recipientEmail: (recipientUser.email || '').toLowerCase(),
+          recipientEmail: rEmail,
           recipientName: recipientUser.name,
+          recipientAvatar: recipientUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(rEmail || recipientUser.id)}`,
           status: 'pending',
           createdAt: new Date().toISOString(),
           timestamp: serverTimestamp(),
@@ -398,9 +436,15 @@ export const CommunityChat: React.FC<Props> = ({
       setInvitedUserIds((prev) => [...prev, recipientUser.id]);
     }
 
-    setInvitedStatus(`Taklifnoma ${recipient} uchun yuborildi va taklif havolasi nusxalandi!`);
+    // Set 48 seconds cooldown
+    setInviteCooldown(48);
+    try {
+      localStorage.setItem('chat_invite_cooldown_endtime', (Date.now() + 48000).toString());
+    } catch {}
+
+    setInvitedStatus(`Taklifnoma ${recipient} uchun yuborildi va taklif havolasi nusxalandi! (Qayta taklif uchun 48 sek kuting)`);
     setInviteInput('');
-    setTimeout(() => setInvitedStatus(null), 4000);
+    setTimeout(() => setInvitedStatus(null), 5000);
   };
 
   const handleCopyMainInviteLink = async () => {
@@ -448,7 +492,7 @@ export const CommunityChat: React.FC<Props> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const activeChannel = CHAT_CHANNELS.find((c) => c.id === selectedChannelId);
+
 
   const isAdmin = currentUser
     ? currentUser.role === 'admin' || isAdminEmail(currentUser.email)
@@ -946,9 +990,194 @@ export const CommunityChat: React.FC<Props> = ({
     }
   };
 
+  // Real-time live users map for resolving up-to-date user avatars and names
+  const [usersMap, setUsersMap] = useState<Map<string, UserProfile>>(new Map());
+  const [registeredUsersCount, setRegisteredUsersCount] = useState<number>(1);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsubUsers = onSnapshot(
+      collection(db, 'users'),
+      (snap) => {
+        setRegisteredUsersCount(Math.max(snap.docs.length, 1));
+        const map = new Map<string, UserProfile>();
+        snap.forEach((d) => {
+          const u = { id: d.id, ...d.data() } as UserProfile;
+          if (d.id) map.set(d.id, u);
+          if (u.id) map.set(u.id, u);
+          if (u.email) map.set(u.email.toLowerCase(), u);
+        });
+        setUsersMap(map);
+      },
+      (err) => console.warn("usersMap sub error:", err)
+    );
+    return () => unsubUsers();
+  }, [isOpen]);
+
+  // Real-time listener for latest messages across all chat channels
+  const [latestMessagesMap, setLatestMessagesMap] = useState<Map<string, { text: string; time: string }>>(new Map());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const q = query(
+      collection(db, 'chatMessages'),
+      orderBy('timestamp', 'desc'),
+      limit(200)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const newMap = new Map<string, { text: string; time: string }>();
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          const channelId = data.channelId || 'general';
+          if (!newMap.has(channelId)) {
+            let msgText = data.text || '';
+            if (!msgText) {
+              if (data.isAudio) msgText = '🎤 Ovozli xabar';
+              else if (data.mediaType === 'image') msgText = '📷 Rasm';
+              else if (data.mediaType === 'video') msgText = '🎥 Video';
+              else if (data.fileName) msgText = '📁 Fayl';
+            }
+            let timeFormatted = '';
+            if (data.createdAt) {
+              try {
+                const d = new Date(data.createdAt);
+                timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              } catch {}
+            }
+            newMap.set(channelId, {
+              text: msgText,
+              time: timeFormatted,
+            });
+          }
+        });
+        setLatestMessagesMap(newMap);
+      },
+      (err) => console.warn("latestMessages sub error:", err)
+    );
+    return () => unsub();
+  }, [isOpen]);
+
   // Accepted direct chat channels & pending incoming requests
   const [acceptedDirectChannels, setAcceptedDirectChannels] = useState<ChatChannel[]>([]);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+  // User custom aliases for direct chats (saved locally per user)
+  const [customAliases, setCustomAliases] = useState<Record<string, string>>(() => {
+    if (!currentUser) return {};
+    try {
+      const saved = localStorage.getItem(`custom_chat_aliases_${currentUser.id || currentUser.email}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Modal state for Pencil (Rename Alias) and Trash (Delete Chat)
+  const [aliasModalData, setAliasModalData] = useState<{ channelId: string; name: string } | null>(null);
+  const [aliasInputValue, setAliasInputValue] = useState('');
+
+  const [deleteModalData, setDeleteModalData] = useState<{ channelId: string; name: string } | null>(null);
+  const [isDeletingChat, setIsDeletingChat] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const saved = localStorage.getItem(`custom_chat_aliases_${currentUser.id || currentUser.email}`);
+      setCustomAliases(saved ? JSON.parse(saved) : {});
+    } catch {
+      setCustomAliases({});
+    }
+  }, [currentUser]);
+
+  const handleOpenAliasModal = (channelId: string, name: string) => {
+    const currentVal = customAliases[channelId] || name;
+    setAliasInputValue(currentVal);
+    setAliasModalData({ channelId, name });
+  };
+
+  const handleSaveAlias = () => {
+    if (!aliasModalData) return;
+    const channelId = aliasModalData.channelId;
+    const trimmed = aliasInputValue.trim();
+    const updated = { ...customAliases };
+    if (trimmed) {
+      updated[channelId] = trimmed;
+    } else {
+      delete updated[channelId];
+    }
+    setCustomAliases(updated);
+    if (currentUser) {
+      try {
+        localStorage.setItem(`custom_chat_aliases_${currentUser.id || currentUser.email}`, JSON.stringify(updated));
+      } catch (err) {
+        console.warn("Error saving custom alias:", err);
+      }
+    }
+    setAliasModalData(null);
+  };
+
+  const handleResetAlias = () => {
+    if (!aliasModalData) return;
+    const channelId = aliasModalData.channelId;
+    const updated = { ...customAliases };
+    delete updated[channelId];
+    setCustomAliases(updated);
+    if (currentUser) {
+      try {
+        localStorage.setItem(`custom_chat_aliases_${currentUser.id || currentUser.email}`, JSON.stringify(updated));
+      } catch (err) {
+        console.warn("Error saving custom alias:", err);
+      }
+    }
+    setAliasModalData(null);
+  };
+
+  const handleOpenDeleteModal = (channelId: string, name: string) => {
+    setDeleteModalData({ channelId, name });
+  };
+
+  const handleConfirmDeleteChat = async () => {
+    if (!deleteModalData) return;
+    const { channelId } = deleteModalData;
+    if (!channelId.startsWith('dm_')) return;
+    setIsDeletingChat(true);
+
+    const reqDocId = channelId.replace('dm_', '');
+
+    try {
+      // Delete chatRequests document
+      await deleteDoc(doc(db, 'chatRequests', reqDocId));
+
+      // Delete all messages associated with channelId
+      const msgSnap = await getDocs(query(collection(db, 'chatMessages'), where('channelId', '==', channelId)));
+      const deletePromises = msgSnap.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(deletePromises);
+
+      // Clean local custom alias if exists
+      const updatedAliases = { ...customAliases };
+      delete updatedAliases[channelId];
+      setCustomAliases(updatedAliases);
+      if (currentUser) {
+        try {
+          localStorage.setItem(`custom_chat_aliases_${currentUser.id || currentUser.email}`, JSON.stringify(updatedAliases));
+        } catch {}
+      }
+
+      // Optimistic local removal
+      setAcceptedDirectChannels((prev) => prev.filter((ch) => ch.id !== channelId));
+      if (selectedChannelId === channelId) {
+        setSelectedChannelId(null);
+      }
+      setDeleteModalData(null);
+    } catch (err) {
+      console.error("Error deleting direct chat:", err);
+      alert("Chatni o'chirishda xatolik yuz berdi.");
+    } finally {
+      setIsDeletingChat(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !currentUser) {
@@ -965,10 +1194,14 @@ export const CommunityChat: React.FC<Props> = ({
     const qSenderEmail = query(collection(db, 'chatRequests'), where('senderEmail', '==', emailLower));
     const qSenderUid = query(collection(db, 'chatRequests'), where('senderUid', '==', uid));
 
-    const reqMap = new Map<string, any>();
+    const queryResults = new Map<string, Map<string, any>>();
 
     const updateAll = () => {
-      const allDocs = Array.from(reqMap.values());
+      const combinedMap = new Map<string, any>();
+      queryResults.forEach((subMap) => {
+        subMap.forEach((val, key) => combinedMap.set(key, val));
+      });
+      const allDocs = Array.from(combinedMap.values());
 
       // 1. Pending requests where current user is recipient
       const pending = allDocs.filter(
@@ -983,16 +1216,27 @@ export const CommunityChat: React.FC<Props> = ({
         const isCurrentSender = (data.senderEmail?.toLowerCase() === emailLower) || (data.senderUid === uid);
         const otherName = isCurrentSender ? data.recipientName : data.senderName;
         const otherEmail = isCurrentSender ? data.recipientEmail : data.senderEmail;
+        const otherUid = isCurrentSender ? data.recipientId : data.senderUid;
+        const otherAvatarDoc = isCurrentSender ? data.recipientAvatar : data.senderAvatar;
+
+        // Resolve live user profile from usersMap
+        const liveUser = (otherUid && usersMap.get(otherUid)) || (otherEmail && usersMap.get(otherEmail.toLowerCase()));
+        const realName = liveUser?.name || otherName;
+        const avatarUrl = liveUser?.avatar || otherAvatarDoc || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(otherEmail || otherName || 'user')}`;
+
         const dmId = `dm_${data.id}`;
+        const displayName = customAliases[dmId] || realName || 'Shaxsiy chat';
+
         return {
           id: dmId,
-          name: otherName || 'Shaxsiy chat',
+          name: displayName,
           description: `Shaxsiy suhbat: ${otherEmail}`,
           category: 'group',
           icon: <Users className="w-5.5 h-5.5 text-emerald-300 drop-shadow-xs" />,
           bgColor: 'bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600',
           membersCount: 'Shaxsiy chat',
           isVerified: true,
+          avatarUrl: avatarUrl,
         };
       });
 
@@ -1000,22 +1244,30 @@ export const CommunityChat: React.FC<Props> = ({
     };
 
     const unsub1 = onSnapshot(qRecipEmail, (snap) => {
-      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      const m = new Map<string, any>();
+      snap.forEach(d => m.set(d.id, { id: d.id, ...d.data() }));
+      queryResults.set('qRecipEmail', m);
       updateAll();
     }, (err) => console.warn("dm sub recip email:", err));
 
     const unsub2 = onSnapshot(qRecipUid, (snap) => {
-      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      const m = new Map<string, any>();
+      snap.forEach(d => m.set(d.id, { id: d.id, ...d.data() }));
+      queryResults.set('qRecipUid', m);
       updateAll();
     }, (err) => console.warn("dm sub recip uid:", err));
 
     const unsub3 = onSnapshot(qSenderEmail, (snap) => {
-      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      const m = new Map<string, any>();
+      snap.forEach(d => m.set(d.id, { id: d.id, ...d.data() }));
+      queryResults.set('qSenderEmail', m);
       updateAll();
     }, (err) => console.warn("dm sub sender email:", err));
 
     const unsub4 = onSnapshot(qSenderUid, (snap) => {
-      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      const m = new Map<string, any>();
+      snap.forEach(d => m.set(d.id, { id: d.id, ...d.data() }));
+      queryResults.set('qSenderUid', m);
       updateAll();
     }, (err) => console.warn("dm sub sender uid:", err));
 
@@ -1025,10 +1277,31 @@ export const CommunityChat: React.FC<Props> = ({
       unsub3();
       unsub4();
     };
-  }, [isOpen, currentUser]);
+  }, [isOpen, currentUser, usersMap, customAliases]);
 
-  // Filter channels in Chat List
-  const allChannels = [...CHAT_CHANNELS, ...acceptedDirectChannels];
+  // Filter channels in Chat List with real-time Firestore message previews and member counts
+  const baseChannels = CHAT_CHANNELS.map((ch) => {
+    const latestMsg = latestMessagesMap.get(ch.id);
+    const realMembersCount = ch.id === 'general' ? `${registeredUsersCount} ta a'zo` : ch.membersCount;
+    return {
+      ...ch,
+      membersCount: realMembersCount,
+      lastMessageText: latestMsg ? latestMsg.text : "Hozircha xabar yo'q",
+      lastMessageTime: latestMsg ? latestMsg.time : '',
+    };
+  });
+
+  const mappedDirectChannels = acceptedDirectChannels.map((ch) => {
+    const latestMsg = latestMessagesMap.get(ch.id);
+    return {
+      ...ch,
+      lastMessageText: latestMsg ? latestMsg.text : "Hozircha xabar yo'q",
+      lastMessageTime: latestMsg ? latestMsg.time : '',
+    };
+  });
+
+  const allChannels = [...baseChannels, ...mappedDirectChannels];
+  const activeChannel = allChannels.find((c) => c.id === selectedChannelId);
   const filteredChannels = allChannels.filter((ch) => {
     if (activeTabFilter !== 'all' && ch.category !== activeTabFilter) return false;
     if (!channelSearchQuery.trim()) return true;
@@ -1170,20 +1443,25 @@ export const CommunityChat: React.FC<Props> = ({
                   </div>
 
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {pendingRequests.map((req) => (
-                      <div key={req.id} className="bg-white p-2.5 rounded-xl border border-sky-200 shadow-2xs flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <img
-                            src={req.senderAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.senderEmail || req.senderName)}`}
-                            alt={req.senderName}
-                            className="w-8 h-8 rounded-full object-cover bg-slate-100 shrink-0 border border-sky-300"
-                          />
-                          <div className="min-w-0">
-                            <div className="font-extrabold text-xs text-slate-800 truncate">{req.senderName}</div>
-                            <div className="text-[10px] text-slate-500 truncate">{req.senderEmail}</div>
+                    {pendingRequests.map((req) => {
+                      const senderUser = (req.senderUid && usersMap.get(req.senderUid)) || (req.senderEmail && usersMap.get(req.senderEmail.toLowerCase()));
+                      const senderAvatar = senderUser?.avatar || req.senderAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.senderEmail || req.senderName)}`;
+                      const senderName = senderUser?.name || req.senderName;
+
+                      return (
+                        <div key={req.id} className="bg-white p-2.5 rounded-xl border border-sky-200 shadow-2xs flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <img
+                              src={senderAvatar}
+                              alt={senderName}
+                              className="w-8 h-8 rounded-full object-cover bg-slate-100 shrink-0 border border-sky-300"
+                            />
+                            <div className="min-w-0">
+                              <div className="font-extrabold text-xs text-slate-800 truncate">{senderName}</div>
+                              <div className="text-[10px] text-slate-500 truncate">{req.senderEmail}</div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
                             onClick={async () => {
@@ -1214,7 +1492,8 @@ export const CommunityChat: React.FC<Props> = ({
                           </button>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               )}
@@ -1225,12 +1504,20 @@ export const CommunityChat: React.FC<Props> = ({
                   onClick={() => setSelectedChannelId(ch.id)}
                   className="p-3.5 hover:bg-slate-50 cursor-pointer transition flex items-center gap-3 active:bg-slate-100 group"
                 >
-                  {/* Avatar Icon */}
-                  <div
-                    className={`w-12 h-12 rounded-full ${ch.bgColor} flex items-center justify-center shrink-0 shadow-sm text-white group-hover:scale-105 transition`}
-                  >
-                    {ch.icon}
-                  </div>
+                  {/* Avatar Icon / Image */}
+                  {ch.avatarUrl ? (
+                    <img
+                      src={ch.avatarUrl}
+                      alt={ch.name}
+                      className="w-12 h-12 rounded-full object-cover shrink-0 shadow-xs border border-slate-200 group-hover:scale-105 transition bg-slate-100"
+                    />
+                  ) : (
+                    <div
+                      className={`w-12 h-12 rounded-full ${ch.bgColor} flex items-center justify-center shrink-0 shadow-sm text-white group-hover:scale-105 transition`}
+                    >
+                      {ch.icon}
+                    </div>
+                  )}
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
@@ -1241,9 +1528,37 @@ export const CommunityChat: React.FC<Props> = ({
                           <CheckCircle2 className="w-3.5 h-3.5 text-[#3390EC] fill-[#3390EC]/10 shrink-0" />
                         )}
                       </h4>
-                      <span className="text-[11px] text-slate-400 font-medium shrink-0">
-                        {ch.lastMessageTime}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {ch.id.startsWith('dm_') && (
+                          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200/80 z-10">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAliasModal(ch.id, ch.name);
+                              }}
+                              className="p-1.5 text-slate-500 hover:text-[#3390EC] hover:bg-white rounded-md transition active:scale-95 cursor-pointer"
+                              title="Nomni faqat o'zingiz uchun o'zgartirish (Qalamcha)"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDeleteModal(ch.id, ch.name);
+                              }}
+                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-white rounded-md transition active:scale-95 cursor-pointer"
+                              title="Shaxsiy chatni va xabarlarni butunlay o'chirish (Axlat chelagi)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        <span className="text-[11px] text-slate-400 font-medium shrink-0">
+                          {ch.lastMessageTime}
+                        </span>
+                      </div>
                     </div>
 
                     <p className="text-xs text-slate-500 truncate">{ch.lastMessageText || ch.description}</p>
@@ -1275,11 +1590,19 @@ export const CommunityChat: React.FC<Props> = ({
                   <ArrowLeft className="w-5 h-5" />
                 </button>
 
-                <div
-                  className={`w-9 h-9 rounded-full ${activeChannel?.bgColor || 'bg-blue-600'} flex items-center justify-center text-white shrink-0 ring-2 ring-white/30`}
-                >
-                  {activeChannel?.icon}
-                </div>
+                {activeChannel?.avatarUrl ? (
+                  <img
+                    src={activeChannel.avatarUrl}
+                    alt={activeChannel.name}
+                    className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-white/30 bg-slate-100"
+                  />
+                ) : (
+                  <div
+                    className={`w-9 h-9 rounded-full ${activeChannel?.bgColor || 'bg-blue-600'} flex items-center justify-center text-white shrink-0 ring-2 ring-white/30`}
+                  >
+                    {activeChannel?.icon}
+                  </div>
+                )}
 
                 <div className="min-w-0">
                   <h3 className="font-extrabold text-sm sm:text-base tracking-tight truncate flex items-center gap-1">
@@ -1295,6 +1618,26 @@ export const CommunityChat: React.FC<Props> = ({
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
+                {activeChannel?.id.startsWith('dm_') && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAliasModal(activeChannel.id, activeChannel.name)}
+                      className="p-1.5 text-sky-100 hover:text-white hover:bg-white/10 rounded-full transition cursor-pointer"
+                      title="Nomni faqat o'zingiz uchun o'zgartirish (Qalamcha)"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDeleteModal(activeChannel.id, activeChannel.name)}
+                      className="p-1.5 text-sky-100 hover:text-red-200 hover:bg-red-500/20 rounded-full transition cursor-pointer"
+                      title="Shaxsiy chatni va barcha xabarlarni butunlay o'chirish (Axlat chelagi)"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => setShowMsgSearch(!showMsgSearch)}
                   className={`p-2 rounded-full transition ${
@@ -1400,6 +1743,10 @@ export const CommunityChat: React.FC<Props> = ({
                 const isAudio = (msg as any).isAudio;
                 const replyData = (msg as any).replyTo;
 
+                const senderUser = (msg.senderUid && usersMap.get(msg.senderUid)) || (msg.senderEmail && usersMap.get(msg.senderEmail.toLowerCase()));
+                const displayAvatar = senderUser?.avatar || msg.senderAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.senderName || 'user')}`;
+                const displayName = senderUser?.name || msg.senderName;
+
                 return (
                   <div
                     key={msg.id}
@@ -1409,11 +1756,8 @@ export const CommunityChat: React.FC<Props> = ({
                   >
                     {!isMe && (
                       <img
-                        src={
-                          msg.senderAvatar ||
-                          `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.senderName}`
-                        }
-                        alt={msg.senderName}
+                        src={displayAvatar}
+                        alt={displayName}
                         className="w-7 h-7 rounded-full border border-slate-200 object-cover shrink-0 mt-auto shadow-2xs bg-white"
                       />
                     )}
@@ -1932,11 +2276,16 @@ export const CommunityChat: React.FC<Props> = ({
                   {inviteInput.trim() && (
                     <button
                       type="button"
+                      disabled={inviteCooldown > 0}
                       onClick={() => handleSendInvite()}
-                      className="absolute right-1.5 top-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1"
+                      className={`absolute right-1.5 top-1.5 text-xs font-extrabold px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1 ${
+                        inviteCooldown > 0
+                          ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      }`}
                     >
                       <Send className="w-3 h-3" />
-                      <span>Taklif etish</span>
+                      <span>{inviteCooldown > 0 ? `${inviteCooldown}s kuting` : 'Taklif etish'}</span>
                     </button>
                   )}
                 </div>
@@ -1980,11 +2329,13 @@ export const CommunityChat: React.FC<Props> = ({
 
                             <button
                               type="button"
-                              disabled={isInvited}
+                              disabled={isInvited || inviteCooldown > 0}
                               onClick={() => handleSendInvite(u)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition ${
                                 isInvited
                                   ? 'bg-emerald-100 text-emerald-700 opacity-80 cursor-default'
+                                  : inviteCooldown > 0
+                                  ? 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-80'
                                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
                               }`}
                             >
@@ -1992,6 +2343,11 @@ export const CommunityChat: React.FC<Props> = ({
                                 <>
                                   <UserCheck className="w-3.5 h-3.5" />
                                   <span>Taklif qilindi</span>
+                                </>
+                              ) : inviteCooldown > 0 ? (
+                                <>
+                                  <UserPlus className="w-3.5 h-3.5" />
+                                  <span>{inviteCooldown}s kuting</span>
                                 </>
                               ) : (
                                 <>
@@ -2021,6 +2377,111 @@ export const CommunityChat: React.FC<Props> = ({
                 className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs transition"
               >
                 Yopish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Alias (Qalamcha - Rename) Modal */}
+      {aliasModalData && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-2.5 text-[#3390EC]">
+              <div className="p-2 bg-sky-50 rounded-xl">
+                <Pencil className="w-5 h-5 text-[#3390EC]" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-slate-800">Nomni o'zgartirish</h3>
+                <p className="text-xs text-slate-500">Ushbu nom faqat sizga ko'rinadi</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-600">Suhbatdosh uchun yangi nom:</label>
+              <input
+                type="text"
+                value={aliasInputValue}
+                onChange={(e) => setAliasInputValue(e.target.value)}
+                placeholder="Yangi nom kiriting..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveAlias();
+                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-[#3390EC] focus:ring-2 focus:ring-[#3390EC]/20 text-sm font-medium text-slate-800"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              {customAliases[aliasModalData.channelId] && (
+                <button
+                  type="button"
+                  onClick={handleResetAlias}
+                  className="mr-auto px-3 py-2 rounded-xl text-xs font-bold text-amber-600 hover:bg-amber-50 transition"
+                >
+                  Asliga qaytarish
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setAliasModalData(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAlias}
+                className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-[#3390EC] hover:bg-blue-600 transition shadow-xs"
+              >
+                Saqlash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Direct Chat (Axlat chelagi) Modal */}
+      {deleteModalData && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-2.5 bg-red-50 rounded-2xl shrink-0">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-slate-800">Shaxsiy chatni o'chirish</h3>
+                <p className="text-xs text-red-600 font-medium">Bu amalni ortga qaytarib bo'lmaydi!</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              <strong className="text-slate-800">"{deleteModalData.name}"</strong> bilan bo'lgan ushbu shaxsiy chat va uning barcha xabarlari butunlay o'chiriladi.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isDeletingChat}
+                onClick={() => setDeleteModalData(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingChat}
+                onClick={handleConfirmDeleteChat}
+                className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 transition shadow-xs flex items-center gap-1.5"
+              >
+                {isDeletingChat ? (
+                  <span>O'chirilmoqda...</span>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Butunlay o'chirish</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
