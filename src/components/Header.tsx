@@ -1,12 +1,13 @@
 import React from 'react';
 import { UserProfile } from '../types';
-import { LogIn, LogOut, Award } from 'lucide-react';
+import { LogIn, LogOut, Award, MessageSquare } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
 interface Props {
   currentUser: UserProfile | null;
   onOpenAuth: () => void;
   onOpenProfile?: () => void;
+  onOpenChat?: () => void;
   onLogout: () => void;
   viewMode: 'student' | 'admin';
   onToggleViewMode: (mode: 'student' | 'admin') => void;
@@ -18,6 +19,7 @@ export const Header: React.FC<Props> = ({
   currentUser,
   onOpenAuth,
   onOpenProfile,
+  onOpenChat,
   onLogout,
   viewMode,
   onToggleViewMode,

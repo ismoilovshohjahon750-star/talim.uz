@@ -1,6 +1,6 @@
 {
   "name": "UniTest",
   "description": "Barcha fanlar va sohalar bo'yicha onlayn test topshirish, bilimni baholash va admin boshqaruv platformasi.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

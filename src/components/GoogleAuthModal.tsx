@@ -121,6 +121,8 @@ export const GoogleAuthModal: React.FC<Props> = ({
       console.error('Google Sign-In Error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
         setError("Google orqali kirish darchasi yopildi");
+      } else if (err.code === 'auth/network-request-failed') {
+        setError("Internet/tarmoq ulanishida xatolik yuz berdi. Internet aloqangizni tekshiring va qayta urinib ko'ring.");
       } else {
         setError("Google orqali kirishda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
       }
@@ -166,6 +168,8 @@ export const GoogleAuthModal: React.FC<Props> = ({
         setError("Noto'g'ri elektron pochta formati");
       } else if (err.code === 'auth/weak-password') {
         setError("Parol juda kuchsiz, kamida 6 ta belgi kiriting");
+      } else if (err.code === 'auth/network-request-failed') {
+        setError("Internet/tarmoq ulanishida xatolik yuz berdi. Internet aloqangizni tekshiring va qayta urinib ko'ring.");
       } else {
         setError(err.message || "Ro'yxatdan o'tishda xatolik yuz berdi");
       }
@@ -206,7 +210,9 @@ export const GoogleAuthModal: React.FC<Props> = ({
       onClose();
     } catch (err: any) {
       console.error('Sign In Error:', err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      if (err.code === 'auth/network-request-failed') {
+        setError("Internet/tarmoq ulanishida xatolik yuz berdi. Internet aloqangizni tekshiring va qayta urinib ko'ring.");
+      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError("Elektron pochta yoki parol noto'g'ri kiritildi. Agar Google orqali ro'yxatdan o'tgan bo'lsangiz, 'Google orqali kirish' tugmasini bosing yoki parolingizni tiklang.");
       } else if (err.code === 'auth/invalid-email') {
         setError("Noto'g'ri elektron pochta manzil kiritildi");
@@ -233,7 +239,9 @@ export const GoogleAuthModal: React.FC<Props> = ({
       setSuccessMsg(`Parolni tiklash havolasi ${email} manziliga yuborildi! Pochtangizni tekshiring va yangi parol o'rnatgach, qayta kiring.`);
     } catch (err: any) {
       console.error('Password Reset Error:', err);
-      if (err.code === 'auth/user-not-found') {
+      if (err.code === 'auth/network-request-failed') {
+        setError("Internet/tarmoq ulanishida xatolik yuz berdi. Internet aloqangizni tekshiring va qayta urinib ko'ring.");
+      } else if (err.code === 'auth/user-not-found') {
         setError("Bunday elektron pochta manzili ro'yxatdan o'tmagan");
       } else if (err.code === 'auth/invalid-email') {
         setError("Noto'g'ri elektron pochta formati");

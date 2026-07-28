@@ -43,6 +43,21 @@
         "timestamp": { "type": "string" }
       },
       "required": ["userId", "testId", "score"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Realtime community chat message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderEmail": { "type": "string" },
+        "senderAvatar": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["senderUid", "senderName", "text"]
     }
   },
   "firestore": {
@@ -57,6 +72,10 @@
     "/attempts/{attemptId}": {
       "schema": { "$ref": "#/entities/UserAttempt" },
       "description": "User test attempts"
+    },
+    "/chatMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Realtime community chat messages"
     }
   }
 }

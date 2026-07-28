@@ -41,6 +41,13 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    match /chatMessages/{messageId} {
+      allow read: if true;
+      allow create: if true;
+      allow delete: if true;
+      allow update: if true;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

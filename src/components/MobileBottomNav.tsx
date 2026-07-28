@@ -1,12 +1,13 @@
 import React from 'react';
 import { UserProfile, isAdminEmail } from '../types';
-import { BookOpen, ShieldCheck, User, LogIn, Award } from 'lucide-react';
+import { BookOpen, ShieldCheck, User, LogIn, Award, MessageSquare } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
 interface Props {
   currentUser: UserProfile | null;
   onOpenAuth: () => void;
   onOpenProfile?: () => void;
+  onOpenChat?: () => void;
   viewMode: 'student' | 'admin';
   onToggleViewMode: (mode: 'student' | 'admin') => void;
   isTestActive?: boolean;
@@ -17,6 +18,7 @@ export const MobileBottomNav: React.FC<Props> = ({
   currentUser,
   onOpenAuth,
   onOpenProfile,
+  onOpenChat,
   viewMode,
   onToggleViewMode,
   isTestActive,
@@ -35,22 +37,34 @@ export const MobileBottomNav: React.FC<Props> = ({
       <button
         type="button"
         onClick={() => onToggleViewMode('student')}
-        className={`flex flex-col items-center justify-center py-1 px-4 rounded-xl min-w-[64px] transition ${
+        className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl min-w-[56px] transition ${
           viewMode === 'student'
             ? 'text-sky-600 font-bold bg-sky-50/80 scale-105'
             : 'text-slate-500 hover:text-slate-800'
         }`}
       >
         <BookOpen className={`w-5 h-5 ${viewMode === 'student' ? 'text-sky-600' : 'text-slate-400'}`} />
-        <span className="text-[11px] mt-0.5 tracking-tight font-medium">{t.navTests}</span>
+        <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t.navTests}</span>
       </button>
+
+      {/* Chat Navigation Button */}
+      {onOpenChat && (
+        <button
+          type="button"
+          onClick={onOpenChat}
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl min-w-[56px] text-sky-600 font-semibold hover:bg-sky-50 transition active:scale-95"
+        >
+          <MessageSquare className="w-5 h-5 text-sky-600" />
+          <span className="text-[10px] mt-0.5 tracking-tight font-medium">Chat</span>
+        </button>
+      )}
 
       {/* Admin Panel (if admin) */}
       {isAdminUser && (
         <button
           type="button"
           onClick={() => onToggleViewMode('admin')}
-          className={`flex flex-col items-center justify-center py-1 px-4 rounded-xl min-w-[64px] transition relative ${
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl min-w-[56px] transition relative ${
             viewMode === 'admin'
               ? 'text-amber-700 font-bold bg-amber-50/90 scale-105'
               : 'text-slate-500 hover:text-slate-800'
@@ -60,7 +74,7 @@ export const MobileBottomNav: React.FC<Props> = ({
             <ShieldCheck className={`w-5 h-5 ${viewMode === 'admin' ? 'text-amber-600' : 'text-slate-400'}`} />
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
           </div>
-          <span className="text-[11px] mt-0.5 tracking-tight font-medium">{t.navAdmin}</span>
+          <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t.navAdmin}</span>
         </button>
       )}
 

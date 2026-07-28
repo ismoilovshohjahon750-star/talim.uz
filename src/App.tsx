@@ -3,12 +3,14 @@ import { Header } from './components/Header';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { ProfileModal } from './components/ProfileModal';
+import { CommunityChat } from './components/CommunityChat';
 import { TestRunner } from './components/TestRunner';
 import { AdminPanel } from './components/AdminPanel';
 import { TestModule, UserProfile, UserAttempt, isAdminEmail } from './types';
 import { Language } from './lib/i18n';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { MessageSquare } from 'lucide-react';
 import {
   collection,
   doc,
@@ -25,6 +27,7 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'student' | 'admin'>('student');
   const [isTestActive, setIsTestActive] = useState<boolean>(false);
   const [lang, setLang] = useState<Language>('uz');
@@ -258,6 +261,7 @@ export function App() {
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenChat={() => setIsChatOpen(true)}
         onLogout={handleLogout}
         viewMode={viewMode}
         onToggleViewMode={(mode) => setViewMode(mode)}
@@ -294,9 +298,19 @@ export function App() {
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenChat={() => setIsChatOpen(true)}
         viewMode={viewMode}
         onToggleViewMode={(mode) => setViewMode(mode)}
         isTestActive={isTestActive}
+        lang={lang}
+      />
+
+      {/* Community Realtime Chat Modal */}
+      <CommunityChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
         lang={lang}
       />
 
@@ -334,7 +348,7 @@ export function App() {
             UniTest — Onlayn Test va Bilimni Baholash Portali
           </p>
           <p className="mt-1 text-gray-400">
-            © 2025 Barcha huquqlar himoyalangan. Firebase Auth, Firestore va Gemini AI bilan quvvatlangan.
+            © 2026 Barcha huquqlar himoyalangan.
           </p>
         </div>
       </footer>

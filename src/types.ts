@@ -108,3 +108,15 @@ export interface UserAttempt {
   percentage: number;
   completedAt: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  senderUid: string;
+  senderName: string;
+  senderEmail?: string;
+  senderAvatar?: string;
+  text: string;
+  createdAt: string;
+  timestamp?: number | any;
+  channelId?: string;
+}
