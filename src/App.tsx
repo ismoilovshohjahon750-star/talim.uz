@@ -21,6 +21,8 @@ import {
   onSnapshot,
   serverTimestamp,
   arrayUnion,
+  query,
+  where,
 } from 'firebase/firestore';
 
 export function App() {
@@ -87,6 +89,48 @@ export function App() {
 
     return () => unsubscribe();
   }, []);
+
+  // 1b. Handle invite parameter in URL when friend signs in
+  useEffect(() => {
+    if (!currentUser) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviterId = urlParams.get('invite');
+    if (inviterId && inviterId !== currentUser.id && inviterId !== 'guest') {
+      const processInviteLink = async () => {
+        try {
+          const inviterSnap = await getDoc(doc(db, 'users', inviterId));
+          if (inviterSnap.exists()) {
+            const inviterData = inviterSnap.data();
+            const q = query(
+              collection(db, 'chatRequests'),
+              where('senderUid', '==', inviterId),
+              where('recipientId', '==', currentUser.id)
+            );
+            const existingReqs = await getDocs(q);
+            if (existingReqs.empty) {
+              await addDoc(collection(db, 'chatRequests'), {
+                senderUid: inviterId,
+                senderName: inviterData.name || 'Foydalanuvchi',
+                senderEmail: (inviterData.email || '').toLowerCase(),
+                senderAvatar: inviterData.avatar || '',
+                recipientId: currentUser.id,
+                recipientEmail: (currentUser.email || '').toLowerCase(),
+                recipientName: currentUser.name || '',
+                status: 'pending',
+                createdAt: new Date().toISOString(),
+                timestamp: serverTimestamp(),
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("Invite link handler error:", e);
+        } finally {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      };
+      processInviteLink();
+    }
+  }, [currentUser]);
 
   // 2. Real-time Firestore sync for testModules, attempts, and users
   useEffect(() => {

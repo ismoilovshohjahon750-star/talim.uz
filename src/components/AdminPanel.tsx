@@ -183,7 +183,34 @@ export const AdminPanel: React.FC<Props> = ({
       if (selectedModuleView?.id === id) setSelectedModuleView(null);
     } catch (err) {
       console.error(err);
+      await fetch(`/api/modules/${id}`, { method: 'DELETE' }).catch(() => {});
+      onRefreshData();
     }
+  };
+
+  const handleDeleteQuestion = async (qIndex: number) => {
+    if (!selectedModuleView) return;
+    if (!confirm("Ushbu savolni o'chirib tashlamoqchimisiz?")) return;
+
+    const updatedQuestions = (selectedModuleView.questions || []).filter((_, idx) => idx !== qIndex);
+    const updatedModule = { ...selectedModuleView, questions: updatedQuestions };
+    setSelectedModuleView(updatedModule);
+
+    try {
+      await setDoc(doc(db, 'testModules', selectedModuleView.id), updatedModule, { merge: true });
+    } catch (e) {
+      console.warn("Firestore question delete error:", e);
+    }
+    try {
+      await fetch('/api/modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedModule),
+      });
+    } catch (e) {
+      console.warn("API question delete error:", e);
+    }
+    onRefreshData();
   };
 
   return (
@@ -464,11 +491,12 @@ export const AdminPanel: React.FC<Props> = ({
                       <Eye className="w-3.5 h-3.5" /> Savollar va Narxlar
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDeleteModule(m.id)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition"
+                      className="p-2 border border-slate-300 hover:border-rose-600 text-rose-600 hover:bg-rose-50 rounded-xl transition active:scale-95 shadow-xs flex items-center justify-center"
                       title="Modulni o'chirish"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 text-rose-600" />
                     </button>
                   </div>
                 </div>
@@ -519,6 +547,14 @@ export const AdminPanel: React.FC<Props> = ({
                         <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md uppercase">
                           {q.type}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuestion(idx)}
+                          className="p-1.5 border border-slate-300 hover:border-rose-600 text-rose-600 hover:bg-rose-50 rounded-lg transition active:scale-95 shadow-xs flex items-center justify-center"
+                          title="Savolni o'chirish"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        </button>
                       </div>
                     </div>
 

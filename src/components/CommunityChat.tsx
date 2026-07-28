@@ -914,8 +914,12 @@ export const CommunityChat: React.FC<Props> = ({
       (currentUid && msgSenderUid === currentUid) ||
       (currentEmail && msgSenderEmail && currentEmail.toLowerCase() === msgSenderEmail.toLowerCase())
     );
+    const isAdmin = Boolean(
+      (currentEmail && isAdminEmail(currentEmail)) ||
+      currentUser?.role === 'admin'
+    );
 
-    if (!isOwner) {
+    if (!isOwner && !isAdmin) {
       alert("Siz faqat o'zingiz yozgan xabarlarni o'chira olasiz.");
       return;
     }
@@ -942,75 +946,84 @@ export const CommunityChat: React.FC<Props> = ({
     }
   };
 
-  // Accepted direct chat channels
+  // Accepted direct chat channels & pending incoming requests
   const [acceptedDirectChannels, setAcceptedDirectChannels] = useState<ChatChannel[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!isOpen || !currentUser || !currentUser.email) {
+    if (!isOpen || !currentUser) {
       setAcceptedDirectChannels([]);
+      setPendingRequests([]);
       return;
     }
 
-    const q1 = query(collection(db, 'chatRequests'), where('recipientEmail', '==', currentUser.email));
-    const q2 = query(collection(db, 'chatRequests'), where('senderEmail', '==', currentUser.email));
+    const emailLower = (currentUser.email || '').toLowerCase();
+    const uid = currentUser.id || '';
 
-    const unsub1 = onSnapshot(q1, (snap1) => {
-      const list: ChatChannel[] = [];
-      snap1.forEach((d) => {
-        const data = d.data();
-        if (data.status === 'accepted') {
-          const otherName = data.senderEmail.toLowerCase() === currentUser.email.toLowerCase() ? data.recipientName : data.senderName;
-          const otherEmail = data.senderEmail.toLowerCase() === currentUser.email.toLowerCase() ? data.recipientEmail : data.senderEmail;
-          const dmId = `dm_${d.id}`;
-          list.push({
-            id: dmId,
-            name: otherName || 'Shaxsiy chat',
-            description: `Shaxsiy suhbat: ${otherEmail}`,
-            category: 'group',
-            icon: <Users className="w-5.5 h-5.5 text-emerald-300 drop-shadow-xs" />,
-            bgColor: 'bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600',
-            membersCount: 'Shaxsiy chat',
-            isVerified: true,
-          });
-        }
-      });
-      setAcceptedDirectChannels(prev => {
-        const map = new Map(prev.map(c => [c.id, c]));
-        list.forEach(c => map.set(c.id, c));
-        return Array.from(map.values());
-      });
-    }, (err) => console.warn("dm sub 1:", err));
+    const qRecipEmail = query(collection(db, 'chatRequests'), where('recipientEmail', '==', emailLower));
+    const qRecipUid = query(collection(db, 'chatRequests'), where('recipientId', '==', uid));
+    const qSenderEmail = query(collection(db, 'chatRequests'), where('senderEmail', '==', emailLower));
+    const qSenderUid = query(collection(db, 'chatRequests'), where('senderUid', '==', uid));
 
-    const unsub2 = onSnapshot(q2, (snap2) => {
-      const list: ChatChannel[] = [];
-      snap2.forEach((d) => {
-        const data = d.data();
-        if (data.status === 'accepted') {
-          const otherName = data.senderEmail.toLowerCase() === currentUser.email.toLowerCase() ? data.recipientName : data.senderName;
-          const otherEmail = data.senderEmail.toLowerCase() === currentUser.email.toLowerCase() ? data.recipientEmail : data.senderEmail;
-          const dmId = `dm_${d.id}`;
-          list.push({
-            id: dmId,
-            name: otherName || 'Shaxsiy chat',
-            description: `Shaxsiy suhbat: ${otherEmail}`,
-            category: 'group',
-            icon: <Users className="w-5.5 h-5.5 text-emerald-300 drop-shadow-xs" />,
-            bgColor: 'bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600',
-            membersCount: 'Shaxsiy chat',
-            isVerified: true,
-          });
-        }
+    const reqMap = new Map<string, any>();
+
+    const updateAll = () => {
+      const allDocs = Array.from(reqMap.values());
+
+      // 1. Pending requests where current user is recipient
+      const pending = allDocs.filter(
+        d => d.status === 'pending' &&
+        (d.recipientEmail?.toLowerCase() === emailLower || d.recipientId === uid)
+      );
+      setPendingRequests(pending);
+
+      // 2. Accepted DM channels
+      const accepted = allDocs.filter(d => d.status === 'accepted');
+      const channels: ChatChannel[] = accepted.map(data => {
+        const isCurrentSender = (data.senderEmail?.toLowerCase() === emailLower) || (data.senderUid === uid);
+        const otherName = isCurrentSender ? data.recipientName : data.senderName;
+        const otherEmail = isCurrentSender ? data.recipientEmail : data.senderEmail;
+        const dmId = `dm_${data.id}`;
+        return {
+          id: dmId,
+          name: otherName || 'Shaxsiy chat',
+          description: `Shaxsiy suhbat: ${otherEmail}`,
+          category: 'group',
+          icon: <Users className="w-5.5 h-5.5 text-emerald-300 drop-shadow-xs" />,
+          bgColor: 'bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600',
+          membersCount: 'Shaxsiy chat',
+          isVerified: true,
+        };
       });
-      setAcceptedDirectChannels(prev => {
-        const map = new Map(prev.map(c => [c.id, c]));
-        list.forEach(c => map.set(c.id, c));
-        return Array.from(map.values());
-      });
-    }, (err) => console.warn("dm sub 2:", err));
+
+      setAcceptedDirectChannels(channels);
+    };
+
+    const unsub1 = onSnapshot(qRecipEmail, (snap) => {
+      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      updateAll();
+    }, (err) => console.warn("dm sub recip email:", err));
+
+    const unsub2 = onSnapshot(qRecipUid, (snap) => {
+      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      updateAll();
+    }, (err) => console.warn("dm sub recip uid:", err));
+
+    const unsub3 = onSnapshot(qSenderEmail, (snap) => {
+      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      updateAll();
+    }, (err) => console.warn("dm sub sender email:", err));
+
+    const unsub4 = onSnapshot(qSenderUid, (snap) => {
+      snap.forEach(d => reqMap.set(d.id, { id: d.id, ...d.data() }));
+      updateAll();
+    }, (err) => console.warn("dm sub sender uid:", err));
 
     return () => {
       unsub1();
       unsub2();
+      unsub3();
+      unsub4();
     };
   }, [isOpen, currentUser]);
 
@@ -1140,6 +1153,69 @@ export const CommunityChat: React.FC<Props> = ({
                   >
                     Kirish
                   </button>
+                </div>
+              )}
+
+              {/* Pending Incoming Invitations Section */}
+              {pendingRequests.length > 0 && (
+                <div className="p-3 bg-gradient-to-r from-sky-50 via-teal-50 to-emerald-50 border-b border-sky-200/80 animate-fade-in space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-sky-900 flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4 text-sky-600" />
+                      <span>Sizga kelgan chat takliflari ({pendingRequests.length})</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full animate-pulse">
+                      Yangi taklif!
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {pendingRequests.map((req) => (
+                      <div key={req.id} className="bg-white p-2.5 rounded-xl border border-sky-200 shadow-2xs flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <img
+                            src={req.senderAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.senderEmail || req.senderName)}`}
+                            alt={req.senderName}
+                            className="w-8 h-8 rounded-full object-cover bg-slate-100 shrink-0 border border-sky-300"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-extrabold text-xs text-slate-800 truncate">{req.senderName}</div>
+                            <div className="text-[10px] text-slate-500 truncate">{req.senderEmail}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await updateDoc(doc(db, 'chatRequests', req.id), { status: 'accepted' });
+                                setSelectedChannelId(`dm_${req.id}`);
+                              } catch (err) {
+                                console.warn("Accept request error:", err);
+                              }
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-2xs transition flex items-center gap-1 active:scale-95"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Qabul</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await updateDoc(doc(db, 'chatRequests', req.id), { status: 'declined' });
+                              } catch (err) {
+                                console.warn("Decline request error:", err);
+                              }
+                            }}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-extrabold px-2 py-1 rounded-lg transition active:scale-95"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1497,17 +1573,17 @@ export const CommunityChat: React.FC<Props> = ({
                           <Reply className="w-3.5 h-3.5" />
                         </button>
 
-                        {isMe && (
+                        {(isMe || (currentUser?.email && isAdminEmail(currentUser.email)) || currentUser?.role === 'admin') && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteMessage(msg.id, msg.senderUid, msg.senderEmail);
                             }}
-                            className="p-1 hover:bg-rose-50 rounded-full text-rose-600 transition active:scale-90"
-                            title="O'chirish"
+                            className="p-1 hover:bg-rose-50 rounded-lg text-rose-600 border border-slate-200 transition active:scale-90 flex items-center justify-center"
+                            title="Xabarni o'chirish"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                           </button>
                         )}
                       </div>

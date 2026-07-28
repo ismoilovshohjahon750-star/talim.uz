@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, UserAttempt, TestModule, isAdminEmail } from '../types';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { collection, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import {
   X,
   LogOut,
@@ -21,6 +21,7 @@ import {
   Key,
   MessageSquare,
   Check,
+  Trash2,
 } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
@@ -54,10 +55,10 @@ export const ProfileModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (!isOpen || !currentUser) return;
-    const email = currentUser.email || '';
+    const emailLower = (currentUser.email || '').toLowerCase();
     const uid = currentUser.id || '';
 
-    const q1 = query(collection(db, 'chatRequests'), where('recipientEmail', '==', email));
+    const q1 = query(collection(db, 'chatRequests'), where('recipientEmail', '==', emailLower));
     const q2 = query(collection(db, 'chatRequests'), where('recipientId', '==', uid));
 
     const listMap = new Map<string, any>();
@@ -94,6 +95,14 @@ export const ProfileModal: React.FC<Props> = ({
       await updateDoc(doc(db, 'chatRequests', reqId), { status });
     } catch (e) {
       console.warn("Update chat request error:", e);
+    }
+  };
+
+  const handleDeleteChatRequest = async (reqId: string) => {
+    try {
+      await deleteDoc(doc(db, 'chatRequests', reqId));
+    } catch (e) {
+      console.warn("Delete chat request error:", e);
     }
   };
 
