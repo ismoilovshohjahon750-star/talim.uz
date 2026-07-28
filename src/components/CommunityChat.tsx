@@ -383,10 +383,10 @@ export const CommunityChat: React.FC<Props> = ({
         await addDoc(collection(db, 'chatRequests'), {
           senderUid: currentUser.id,
           senderName: currentUser.name,
-          senderEmail: currentUser.email,
-          senderAvatar: currentUser.avatar,
+          senderEmail: (currentUser.email || '').toLowerCase(),
+          senderAvatar: currentUser.avatar || '',
           recipientId: recipientUser.id,
-          recipientEmail: recipientUser.email,
+          recipientEmail: (recipientUser.email || '').toLowerCase(),
           recipientName: recipientUser.name,
           status: 'pending',
           createdAt: new Date().toISOString(),

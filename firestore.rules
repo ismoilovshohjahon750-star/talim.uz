@@ -48,6 +48,20 @@ service cloud.firestore {
       allow update: if true;
     }
 
+    match /chatRequests/{requestId} {
+      allow read: if true;
+      allow create: if true;
+      allow delete: if true;
+      allow update: if true;
+    }
+
+    match /messages/{messageId} {
+      allow read: if true;
+      allow create: if true;
+      allow delete: if true;
+      allow update: if true;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

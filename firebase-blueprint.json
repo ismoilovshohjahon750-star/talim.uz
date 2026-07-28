@@ -58,6 +58,22 @@
         "createdAt": { "type": "string" }
       },
       "required": ["senderUid", "senderName", "text"]
+    },
+    "ChatRequest": {
+      "title": "ChatRequest",
+      "description": "Direct chat invitation requests",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderEmail": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "recipientEmail": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -76,6 +92,10 @@
     "/chatMessages/{messageId}": {
       "schema": { "$ref": "#/entities/ChatMessage" },
       "description": "Realtime community chat messages"
+    },
+    "/chatRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/ChatRequest" },
+      "description": "Direct chat invitations"
     }
   }
 }
