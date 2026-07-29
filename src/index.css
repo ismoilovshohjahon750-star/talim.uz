@@ -29,7 +29,15 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Custom UI Components matching the style spec */
+/* Hide scrollbar globally for clean UI */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 
 .wrap {
   max-width: 1120px;
