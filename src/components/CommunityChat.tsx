@@ -1325,11 +1325,11 @@ export const CommunityChat: React.FC<Props> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in overflow-hidden">
       <div
         className={`bg-[#E6EBEF] w-full ${
-          isExpanded ? 'max-w-4xl h-[92vh]' : 'max-w-lg h-[88vh] sm:h-[680px]'
-        } rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-300 flex flex-col overflow-hidden transition-all duration-300 relative font-sans`}
+          isExpanded ? 'max-w-4xl h-[100dvh] sm:h-[90vh]' : 'max-w-lg h-[100dvh] sm:h-[680px]'
+        } rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-300 flex flex-col overflow-hidden transition-all duration-300 relative font-sans`}
       >
         {/* ================= VIEW 1: CHAT CHANNELS LIST (CHATLAR RO'YXATI) ================= */}
         {!selectedChannelId ? (
@@ -1586,11 +1586,11 @@ export const CommunityChat: React.FC<Props> = ({
           /* ================= VIEW 2: ACTIVE SELECTED CHAT ROOM (CHAT XONASI) ================= */
           <div className="flex flex-col h-full">
             {/* Top Telegram Header with Back Arrow */}
-            <div className="bg-[#3390EC] text-white p-2.5 sm:px-4 flex items-center justify-between shadow-md shrink-0 z-20">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div className="bg-[#3390EC] text-white p-2 sm:px-4 flex items-center justify-between shadow-md shrink-0 z-20 gap-1.5 min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
                 <button
                   onClick={() => setSelectedChannelId(null)}
-                  className="p-1.5 hover:bg-white/10 rounded-full transition text-white active:scale-95 shrink-0"
+                  className="p-1 sm:p-1.5 hover:bg-white/10 rounded-full transition text-white active:scale-95 shrink-0"
                   title="Chatlar ro'yxatiga qaytish"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -1600,60 +1600,60 @@ export const CommunityChat: React.FC<Props> = ({
                   <img
                     src={activeChannel.avatarUrl}
                     alt={activeChannel.name}
-                    className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-white/30 bg-slate-100"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 ring-2 ring-white/30 bg-slate-100"
                   />
                 ) : (
                   <div
-                    className={`w-9 h-9 rounded-full ${activeChannel?.bgColor || 'bg-blue-600'} flex items-center justify-center text-white shrink-0 ring-2 ring-white/30`}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full ${activeChannel?.bgColor || 'bg-blue-600'} flex items-center justify-center text-white shrink-0 ring-2 ring-white/30`}
                   >
                     {activeChannel?.icon}
                   </div>
                 )}
 
-                <div className="min-w-0">
-                  <h3 className="font-extrabold text-sm sm:text-base tracking-tight truncate flex items-center gap-1">
-                    <span>{activeChannel?.name}</span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-extrabold text-xs sm:text-base tracking-tight truncate flex items-center gap-1 max-w-[130px] xs:max-w-[190px] sm:max-w-none">
+                    <span className="truncate">{activeChannel?.name}</span>
                     {activeChannel?.isVerified && (
                       <CheckCircle2 className="w-3.5 h-3.5 text-sky-200 fill-white shrink-0" />
                     )}
                   </h3>
-                  <p className="text-[11px] text-sky-100 opacity-90 truncate">
+                  <p className="text-[10px] sm:text-[11px] text-sky-100 opacity-90 truncate">
                     {activeChannel?.membersCount || 'Jonli chat'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                 {activeChannel?.id.startsWith('dm_') && (
                   <>
                     <button
                       type="button"
                       onClick={() => handleOpenAliasModal(activeChannel.id, activeChannel.name)}
-                      className="p-1.5 text-sky-100 hover:text-white hover:bg-white/10 rounded-full transition cursor-pointer"
+                      className="p-1 sm:p-1.5 text-sky-100 hover:text-white hover:bg-white/10 rounded-full transition cursor-pointer"
                       title="Nomni faqat o'zingiz uchun o'zgartirish (Qalamcha)"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleOpenDeleteModal(activeChannel.id, activeChannel.name)}
-                      className="p-1.5 text-sky-100 hover:text-red-200 hover:bg-red-500/20 rounded-full transition cursor-pointer"
+                      className="p-1 sm:p-1.5 text-sky-100 hover:text-red-200 hover:bg-red-500/20 rounded-full transition cursor-pointer"
                       title="Shaxsiy chatni va barcha xabarlarni butunlay o'chirish (Axlat chelagi)"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </>
                 )}
                 <button
                   onClick={() => setShowMsgSearch(!showMsgSearch)}
-                  className={`p-2 rounded-full transition ${
+                  className={`p-1.5 sm:p-2 rounded-full transition ${
                     showMsgSearch
                       ? 'bg-white/20 text-white'
                       : 'text-sky-100 hover:text-white hover:bg-white/10'
                   }`}
                   title="Qidirish"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
@@ -1664,10 +1664,10 @@ export const CommunityChat: React.FC<Props> = ({
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 text-sky-100 hover:text-white hover:bg-white/10 rounded-full transition active:scale-95"
+                  className="p-1.5 sm:p-2 text-sky-100 hover:text-white hover:bg-white/10 rounded-full transition active:scale-95"
                   title="Yopish"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
             </div>
@@ -1756,7 +1756,7 @@ export const CommunityChat: React.FC<Props> = ({
                 return (
                   <div
                     key={msg.id}
-                    className={`flex gap-2 max-w-[88%] sm:max-w-[78%] ${
+                    className={`flex gap-1.5 sm:gap-2 max-w-[92%] xs:max-w-[85%] sm:max-w-[78%] ${
                       isMe ? 'ml-auto flex-row-reverse' : 'mr-auto'
                     }`}
                   >
@@ -1768,7 +1768,7 @@ export const CommunityChat: React.FC<Props> = ({
                       />
                     )}
 
-                    <div className={`flex flex-col relative group ${isMe ? 'items-end' : 'items-start'}`}>
+                    <div className={`flex flex-col relative group min-w-0 ${isMe ? 'items-end' : 'items-start'}`}>
                       {/* Sender Name */}
                       {!isMe && (
                         <div className="flex items-center gap-1.5 px-2 mb-0.5 text-[11px] font-bold text-[#2481CC]">
@@ -1784,7 +1784,7 @@ export const CommunityChat: React.FC<Props> = ({
                       {/* Telegram Bubble */}
                       <div
                         onClick={() => setActiveActionMsgId(activeActionMsgId === msg.id ? null : msg.id)}
-                        className={`relative px-3 py-2 rounded-2xl text-xs sm:text-sm leading-relaxed break-words shadow-xs transition-all cursor-pointer ${
+                        className={`relative px-2.5 sm:px-3 py-2 rounded-2xl text-xs sm:text-sm leading-relaxed break-words max-w-full shadow-xs transition-all cursor-pointer ${
                           isMe
                             ? 'bg-[#EEFFDE] border border-[#D2F1B2] text-slate-900 rounded-tr-xs'
                             : 'bg-white text-slate-900 rounded-tl-xs'
@@ -1800,12 +1800,12 @@ export const CommunityChat: React.FC<Props> = ({
 
                         {/* Media / File attachment display */}
                         {(msg as any).mediaUrl && (
-                          <div className="my-1.5 overflow-hidden rounded-xl">
+                          <div className="my-1.5 overflow-hidden rounded-xl max-w-full">
                             {(msg as any).mediaType === 'image' && (
                               <img
                                 src={(msg as any).mediaUrl}
                                 alt={(msg as any).fileName || 'Rasm'}
-                                className="max-w-xs sm:max-w-sm max-h-72 rounded-xl object-cover cursor-pointer hover:opacity-95 transition shadow-2xs"
+                                className="w-full max-w-[220px] xs:max-w-[270px] sm:max-w-sm max-h-56 sm:max-h-72 rounded-xl object-cover cursor-pointer hover:opacity-95 transition shadow-2xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   const w = window.open('');
@@ -1817,7 +1817,7 @@ export const CommunityChat: React.FC<Props> = ({
                               <video
                                 src={(msg as any).mediaUrl}
                                 controls
-                                className="max-w-xs sm:max-w-sm max-h-72 rounded-xl object-cover shadow-2xs"
+                                className="w-full max-w-[220px] xs:max-w-[270px] sm:max-w-sm max-h-56 sm:max-h-72 rounded-xl object-cover shadow-2xs"
                                 onClick={(e) => e.stopPropagation()}
                               />
                             )}
@@ -1828,10 +1828,10 @@ export const CommunityChat: React.FC<Props> = ({
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-2.5 p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition group/file text-left min-w-[200px]"
+                                className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition group/file text-left min-w-[160px] xs:min-w-[200px] max-w-full"
                               >
-                                <div className="w-10 h-10 rounded-lg bg-[#3390EC] text-white flex items-center justify-center shrink-0 shadow-2xs group-hover/file:scale-105 transition">
-                                  <FileText className="w-5 h-5" />
+                                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[#3390EC] text-white flex items-center justify-center shrink-0 shadow-2xs group-hover/file:scale-105 transition">
+                                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
                                 <div className="flex-1 min-w-0 pr-1">
                                   <div className="font-bold text-slate-800 text-xs truncate">
@@ -2083,7 +2083,7 @@ export const CommunityChat: React.FC<Props> = ({
             ) : (
               <form
                 onSubmit={handleSendMessage}
-                className="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0 z-20"
+                className="p-1.5 sm:p-2.5 bg-white border-t border-slate-200 flex items-center gap-1 sm:gap-2 shrink-0 z-20"
               >
                 <input
                   type="file"
@@ -2103,34 +2103,34 @@ export const CommunityChat: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className={`p-2 rounded-full transition ${
+                  className={`p-1.5 sm:p-2 rounded-full transition shrink-0 ${
                     showEmojiPicker ? 'text-[#3390EC] bg-sky-50' : 'text-slate-400 hover:text-slate-600'
                   }`}
                   title="Smayliklar"
                 >
-                  <Smile className="w-5 h-5" />
+                  <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
-                  className={`p-2 rounded-full transition ${
+                  className={`p-1.5 sm:p-2 rounded-full transition shrink-0 ${
                     selectedFile?.type === 'video' ? 'text-[#3390EC] bg-sky-100' : 'text-slate-400 hover:text-[#3390EC] hover:bg-sky-50'
                   }`}
                   title="Video yuborish"
                 >
-                  <Video className="w-5 h-5" />
+                  <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className={`p-2 rounded-full transition ${
+                  className={`p-1.5 sm:p-2 rounded-full transition shrink-0 ${
                     selectedFile && selectedFile.type !== 'video' ? 'text-[#3390EC] bg-sky-100' : 'text-slate-400 hover:text-[#3390EC] hover:bg-sky-50'
                   }`}
                   title="Rasm yoki fayl biriktirish"
                 >
-                  <Paperclip className="w-5 h-5" />
+                  <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <input
@@ -2140,26 +2140,26 @@ export const CommunityChat: React.FC<Props> = ({
                   onChange={(e) => setText(e.target.value)}
                   placeholder={
                     selectedFile
-                      ? 'Tavsif yozing (ixtiyoriy)...'
+                      ? 'Tavsif yozing...'
                       : currentUser
                       ? 'Xabar yozing...'
-                      : 'Yozish uchun avval tizimga kiring...'
+                      : 'Kirish kerak...'
                   }
                   maxLength={600}
-                  className="flex-1 bg-slate-100/90 border border-transparent focus:border-[#3390EC] focus:bg-white focus:outline-none px-3.5 py-2 rounded-2xl text-xs sm:text-sm text-slate-800 transition"
+                  className="flex-1 min-w-0 bg-slate-100/90 border border-transparent focus:border-[#3390EC] focus:bg-white focus:outline-none px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl text-xs sm:text-sm text-slate-800 transition"
                 />
 
                 <button
                   type="submit"
                   disabled={loading || (!text.trim() && !selectedFile)}
-                  className={`p-2.5 rounded-full flex items-center justify-center transition shrink-0 ${
+                  className={`p-2 sm:p-2.5 rounded-full flex items-center justify-center transition shrink-0 ${
                     text.trim() || selectedFile
                       ? 'bg-[#3390EC] hover:bg-[#2481CC] text-white shadow-md shadow-sky-500/20 active:scale-95'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-60'
                   }`}
                   title="Yuborish"
                 >
-                  <Send className="w-4 h-4 -translate-x-0.5" />
+                  <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 -translate-x-0.5" />
                 </button>
               </form>
             )}
