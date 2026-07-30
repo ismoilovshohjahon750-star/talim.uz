@@ -21,6 +21,21 @@ export const translations = {
     navProfile: "Profil",
     navLogin: "Kirish",
 
+    // Registration Required Gate
+    registrationRequiredTitle: "Testlarni ko'rish va ishlash uchun ro'yxatdan o'ting",
+    registrationRequiredSub: "UniTest portalidagi barcha fanlar bo'yicha testlar, natijalar tahlili va sertifikatlardan foydalanish uchun bepul ro'yxatdan o'ting yoki hisobingizga kiring.",
+    registrationRequiredBtn: "Ro'yxatdan O'tish / Tizimga Kirish",
+    googleSignInQuickBtn: "Google orqali kiring",
+    registrationLockNote: "Testlar faqat ro'yxatdan o'tgan foydalanuvchilar uchun ochiq",
+    feature1Title: "Boy Testlar To'plami",
+    feature1Sub: "Informatika (IC3), Biologiya, Fizika, Kimyo va Matematika bo'yicha testlar",
+    feature2Title: "Natijalar & AI Tahlili",
+    feature2Sub: "Topshirilgan testlar, foiz ko'rsatkichlari va tahlil statistikasi",
+    feature3Title: "Jonli Hamjamiyat Chat",
+    feature3Sub: "Talabalar va o'qituvchilar bilan muloqot hamda tajriba almashish",
+    feature4Title: "Sertifikatlar & Portfoliolar",
+    feature4Sub: "Imtihonlarni topshirib, o'z bilim darajangizni rasman tasdiqlang",
+
     // Hero Section
     heroBadge: "UniTest — Yagona Onlayn Test Portali",
     heroTitle: "Bilim va Ko'nikmalarni Baholash Markazi",
@@ -183,6 +198,21 @@ export const translations = {
     navProfile: "Profile",
     navLogin: "Login",
 
+    // Registration Required Gate
+    registrationRequiredTitle: "Please Register to View and Take Tests",
+    registrationRequiredSub: "Sign in or create an account to access all test modules, detailed analytics, and certificates on the UniTest platform.",
+    registrationRequiredBtn: "Register / Sign In",
+    googleSignInQuickBtn: "Sign in with Google",
+    registrationLockNote: "Tests are only available for registered users",
+    feature1Title: "Rich Test Collection",
+    feature1Sub: "Tests in Computer Science (IC3), Biology, Physics, Chemistry, and Math",
+    feature2Title: "Results & AI Analytics",
+    feature2Sub: "Accurate metrics and percentage tracking for completed tests",
+    feature3Title: "Community & Live Chat",
+    feature3Sub: "Engage and solve questions together with fellow students",
+    feature4Title: "Certificates & Achievements",
+    feature4Sub: "Successfully pass tests and prove your knowledge proficiency",
+
     // Hero Section
     heroBadge: "UniTest — Universal Online Testing Platform",
     heroTitle: "Knowledge & Skill Assessment Center",
@@ -326,3 +356,64 @@ export const translations = {
     authFooterNote: "Secure & fast Google Firebase Authentication",
   },
 };
+
+function localizeTimeText(uz: string, ru: string, en: string, lang: string): string {
+  if (lang === 'ru') return ru;
+  if (lang === 'en') return en;
+  return uz;
+}
+
+export function formatTimeAgo(dateInput?: string | number | Date | null, lang: string = 'uz'): string {
+  if (!dateInput) return localizeTimeText('Noma’lum', 'Неизвестно', 'Unknown', lang);
+
+  let timestamp: number;
+  if (typeof dateInput === 'number') {
+    timestamp = dateInput;
+  } else if (typeof dateInput === 'string') {
+    if (dateInput === 'Hozir' || dateInput === 'Just now' || dateInput === 'Только что') {
+      timestamp = Date.now();
+    } else {
+      const parsed = Date.parse(dateInput);
+      timestamp = isNaN(parsed) ? Date.now() : parsed;
+    }
+  } else if (dateInput instanceof Date) {
+    timestamp = dateInput.getTime();
+  } else {
+    timestamp = Date.now();
+  }
+
+  const now = Date.now();
+  const diffInSeconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+
+  if (diffInSeconds < 10) {
+    return localizeTimeText('Hozir', 'Только что', 'Just now', lang);
+  }
+
+  if (diffInSeconds < 60) {
+    return localizeTimeText(`${diffInSeconds} sek avval`, `${diffInSeconds} сек назад`, `${diffInSeconds}s ago`, lang);
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return localizeTimeText(`${diffInMinutes} min avval`, `${diffInMinutes} мин назад`, `${diffInMinutes}m ago`, lang);
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return localizeTimeText(`${diffInHours} soat avval`, `${diffInHours} ч назад`, `${diffInHours}h ago`, lang);
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return localizeTimeText(`${diffInDays} kun avval`, `${diffInDays} дн назад`, `${diffInDays}d ago`, lang);
+  }
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return localizeTimeText(`${diffInMonths} oy avval`, `${diffInMonths} мес назад`, `${diffInMonths}mo ago`, lang);
+  }
+
+  const diffInYears = Math.floor(diffInDays / 365);
+  return localizeTimeText(`${diffInYears} yil avval`, `${diffInYears} г. назад`, `${diffInYears}y ago`, lang);
+}
+

@@ -66,7 +66,7 @@ export function App() {
               avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firebaseUser.email || 'user')}`,
               role: isPrimaryAdmin ? 'admin' : 'student',
               registeredAt: new Date().toISOString().split('T')[0],
-              lastActive: 'Hozir',
+              lastActive: new Date().toISOString(),
               testsTaken: 0,
               avgScore: 0,
             };
@@ -255,7 +255,7 @@ export function App() {
             {
               testsTaken: prevTaken + 1,
               avgScore: newAvg,
-              lastActive: 'Hozir',
+              lastActive: new Date().toISOString(),
             },
             { merge: true }
           );
@@ -325,11 +325,13 @@ export function App() {
             modules={modules}
             attempts={attempts}
             onRefreshData={fetchDataFromBackend}
+            lang={lang}
           />
         ) : (
           <TestRunner
             modules={modules}
             currentUser={currentUser}
+            loadingAuth={loadingAuth}
             onSaveAttempt={handleSaveAttempt}
             onUnlockTest={handleUnlockTest}
             onOpenAuth={() => setIsAuthOpen(true)}

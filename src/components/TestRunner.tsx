@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { TestModule, Question, QuestionOption, YNItem, MatchPair, OrderStep, UserProfile, isAdminEmail, getNormalizedSubject } from '../types';
-import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers, ChevronLeft, ChevronRight, Dna, Laptop, Zap, FlaskConical, ChevronUp, ChevronDown } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, ArrowLeft, RotateCcw, Award, Globe, HelpCircle, Check, Sparkles, Lock, Unlock, CreditCard, ShieldCheck, CheckCircle, DollarSign, Star, BookOpen, Layers, ChevronLeft, ChevronRight, Dna, Laptop, Zap, FlaskConical, ChevronUp, ChevronDown, UserPlus, MessageSquare } from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
 interface Props {
   modules: TestModule[];
   currentUser: UserProfile | null;
+  loadingAuth?: boolean;
   onSaveAttempt: (testId: string, testTitle: string, score: number, total: number) => void;
   onUnlockTest?: (testId: string) => void;
   onOpenAuth?: () => void;
@@ -17,6 +18,7 @@ interface Props {
 export const TestRunner: React.FC<Props> = ({
   modules,
   currentUser,
+  loadingAuth,
   onSaveAttempt,
   onUnlockTest,
   onOpenAuth,
@@ -256,6 +258,114 @@ export const TestRunner: React.FC<Props> = ({
     setIsFinished(true);
     onSaveAttempt(activeModule.id, activeModule.title, score, total);
   };
+
+  // 1. Loading State while Firebase Auth resolves
+  if (loadingAuth) {
+    return (
+      <div className="wrap flex flex-col items-center justify-center min-h-[50vh] py-12 text-center">
+        <div className="w-12 h-12 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold text-slate-600">Akkaunt holati tekshirilmoqda...</p>
+      </div>
+    );
+  }
+
+  // 2. Registration Gate: Do NOT show tests until user registers or signs in
+  if (!currentUser) {
+    return (
+      <div className="wrap max-w-4xl mx-auto py-4 sm:py-8">
+        {/* Registration Required Hero Card */}
+        <div className="bg-gradient-to-br from-slate-900 via-sky-950 to-indigo-950 text-white rounded-3xl p-6 sm:p-10 shadow-2xl border border-sky-500/20 relative overflow-hidden text-center">
+          {/* Background Decorative Elements */}
+          <div className="absolute inset-0 bg-girikh-pattern opacity-10 pointer-events-none" />
+          <div className="absolute -top-24 -right-24 w-72 h-72 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-2xl mx-auto flex flex-col items-center">
+            {/* Glowing Lock Badge */}
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white border-2 border-sky-300/40 shadow-2xl shadow-sky-500/30 mb-6">
+              <Lock className="w-10 h-10 sm:w-12 sm:h-12 text-amber-300 drop-shadow-md" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 bg-sky-500/20 text-sky-200 font-bold px-3.5 py-1 rounded-full text-xs mb-3 border border-sky-400/30 backdrop-blur-xs">
+              <ShieldCheck className="w-4 h-4 text-sky-400" />
+              <span>{t.registrationLockNote || "Testlar faqat ro'yxatdan o'tgan foydalanuvchilar uchun ochiq"}</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
+              {t.registrationRequiredTitle || "Testlarni ko'rish va ishlash uchun ro'yxatdan o'ting"}
+            </h2>
+
+            <p className="text-slate-300 text-xs sm:text-sm mt-3 leading-relaxed font-normal">
+              {t.registrationRequiredSub || "UniTest portalidagi barcha fanlar bo'yicha testlar, natijalar tahlili va sertifikatlardan foydalanish uchun bepul ro'yxatdan o'ting yoki hisobingizga kiring."}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
+              <button
+                onClick={onOpenAuth}
+                className="w-full sm:w-auto bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black text-sm sm:text-base py-3.5 px-8 rounded-2xl shadow-xl shadow-sky-600/30 transition duration-200 active:scale-95 flex items-center justify-center gap-2.5 border border-sky-300/30"
+              >
+                <UserPlus className="w-5 h-5 text-amber-300" />
+                <span>{t.registrationRequiredBtn || "Ro'yxatdan O'tish / Tizimga Kirish"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Grid Highlighting Unlocked Benefits */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-8">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">{t.feature1Title || "Boy Testlar To'plami"}</h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                {t.feature1Sub || "Informatika (IC3), Biologiya, Fizika, Kimyo va Matematika bo'yicha testlar"}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">{t.feature2Title || "Natijalar & AI Tahlili"}</h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                {t.feature2Sub || "Topshirilgan testlar, foiz ko'rsatkichlari va tahlil statistikasi"}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+              <MessageSquare className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">{t.feature3Title || "Jonli Hamjamiyat Chat"}</h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                {t.feature3Sub || "Talabalar va o'qituvchilar bilan muloqot hamda tajriba almashish"}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+              <Award className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">{t.feature4Title || "Sertifikatlar & Portfoliolar"}</h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                {t.feature4Sub || "Imtihonlarni topshirib, o'z bilim darajangizni rasman tasdiqlang"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // View: Test Selection Hub
   if (!activeModule) {

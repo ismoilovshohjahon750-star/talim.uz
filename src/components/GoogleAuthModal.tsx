@@ -93,7 +93,7 @@ export const GoogleAuthModal: React.FC<Props> = ({
       avatar: photoUrl || userSnap.data()?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName || userEmail)}`,
       role: role,
       registeredAt: userSnap.exists() ? userSnap.data().registeredAt : new Date().toISOString().split('T')[0],
-      lastActive: 'Hozir',
+      lastActive: new Date().toISOString(),
       testsTaken: userSnap.exists() ? userSnap.data().testsTaken || 0 : 0,
       avgScore: userSnap.exists() ? userSnap.data().avgScore || 0 : 0,
     };

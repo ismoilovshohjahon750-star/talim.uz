@@ -10,7 +10,7 @@ export const INITIAL_USERS: UserProfile[] = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Shohjahon",
     role: "admin",
     registeredAt: "2025-01-10",
-    lastActive: "Hozir",
+    lastActive: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
     testsTaken: 0,
     avgScore: 0
   },
@@ -21,7 +21,7 @@ export const INITIAL_USERS: UserProfile[] = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ranvar",
     role: "admin",
     registeredAt: "2025-01-10",
-    lastActive: "Hozir",
+    lastActive: new Date(Date.now() - 48 * 60 * 1000).toISOString(),
     testsTaken: 0,
     avgScore: 0
   }

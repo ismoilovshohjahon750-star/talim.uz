@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TestModule, UserProfile, UserAttempt, Question, isAdminEmail, getNormalizedSubject } from '../types';
+import { formatTimeAgo, Language } from '../lib/i18n';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Users, FileText, PlusCircle, Upload, Sparkles, CheckCircle, Trash2, ChevronRight, ShieldAlert, FileType, Check, ArrowRight, RefreshCw, Eye, DollarSign, Lock, Unlock, Tag, Edit3, Save, Dna, Laptop, Zap, FlaskConical, BookOpen } from 'lucide-react';
@@ -10,6 +11,7 @@ interface Props {
   modules: TestModule[];
   attempts: UserAttempt[];
   onRefreshData: () => void;
+  lang?: Language;
 }
 
 export const AdminPanel: React.FC<Props> = ({
@@ -18,10 +20,18 @@ export const AdminPanel: React.FC<Props> = ({
   modules,
   attempts,
   onRefreshData,
+  lang = 'uz',
 }) => {
   const isAdmin = currentUser?.role === 'admin' || isAdminEmail(currentUser?.email);
 
   const [activeTab, setActiveTab] = useState<'users' | 'questions' | 'wizard'>('users');
+  const [, setTick] = useState(0);
+
+  // Live timer tick every 10s to update relative timestamps (sec/min/soat)
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   // 3-Step Wizard State
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
@@ -322,7 +332,7 @@ export const AdminPanel: React.FC<Props> = ({
                     </td>
                     <td className="p-3.5 font-semibold text-gray-700">{u.testsTaken} ta</td>
                     <td className="p-3.5 font-bold text-emerald-600">{u.avgScore}%</td>
-                    <td className="p-3.5 text-xs text-gray-500">{u.lastActive}</td>
+                    <td className="p-3.5 text-xs text-gray-500 font-medium">{formatTimeAgo(u.lastActive, lang)}</td>
                   </tr>
                 ))}
               </tbody>

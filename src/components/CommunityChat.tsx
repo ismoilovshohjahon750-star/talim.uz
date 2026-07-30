@@ -33,6 +33,7 @@ import {
   Mic,
   FileText,
   Film,
+  Video,
   Image as ImageIcon,
   Download,
   ArrowDown,
@@ -487,6 +488,7 @@ export const CommunityChat: React.FC<Props> = ({
     dataUrl: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -594,9 +596,14 @@ export const CommunityChat: React.FC<Props> = ({
     try {
       const processed = await processFileForUpload(file);
       const approxBytes = Math.round((processed.dataUrl.length * 3) / 4);
-      if (approxBytes > 750 * 1024) {
-        alert("Fayl hajmi juda katta (maksimal ruxsat etilgan hajm 750KB). Iltimos, kichikroq fayl tanlang.");
+      if (approxBytes > 850 * 1024) {
+        if (processed.type === 'video') {
+          alert("Video hajmi juda katta (maksimal ruxsat etilgan hajm 850KB). Iltimos, 10-20 soniyalik qisqa video fayl tanlang.");
+        } else {
+          alert("Fayl hajmi juda katta (maksimal ruxsat etilgan hajm 850KB). Iltimos, kichikroq fayl tanlang.");
+        }
         if (fileInputRef.current) fileInputRef.current.value = '';
+        if (videoInputRef.current) videoInputRef.current.value = '';
         return;
       }
 
@@ -613,9 +620,8 @@ export const CommunityChat: React.FC<Props> = ({
       alert("Faylni yuklab bo'lmadi.");
     }
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
   // Real-time listener for current selected chat channel
@@ -2016,8 +2022,11 @@ export const CommunityChat: React.FC<Props> = ({
                       className="w-10 h-10 rounded-lg object-cover border border-sky-200 shrink-0 shadow-2xs"
                     />
                   ) : selectedFile.type === 'video' ? (
-                    <div className="w-10 h-10 rounded-lg bg-sky-200 text-sky-800 flex items-center justify-center shrink-0">
-                      <Film className="w-5 h-5" />
+                    <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-sky-300 bg-slate-900 shrink-0 shadow-2xs flex items-center justify-center">
+                      <video src={selectedFile.previewUrl} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <Video className="w-4 h-4 text-white drop-shadow-md" />
+                      </div>
                     </div>
                   ) : (
                     <div className="w-10 h-10 rounded-lg bg-sky-200 text-sky-800 flex items-center justify-center shrink-0">
@@ -2083,6 +2092,13 @@ export const CommunityChat: React.FC<Props> = ({
                   accept="image/*,video/*,audio/*,application/*,text/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
                   className="hidden"
                 />
+                <input
+                  type="file"
+                  ref={videoInputRef}
+                  onChange={handleFileSelect}
+                  accept="video/*"
+                  className="hidden"
+                />
 
                 <button
                   type="button"
@@ -2097,11 +2113,22 @@ export const CommunityChat: React.FC<Props> = ({
 
                 <button
                   type="button"
+                  onClick={() => videoInputRef.current?.click()}
+                  className={`p-2 rounded-full transition ${
+                    selectedFile?.type === 'video' ? 'text-[#3390EC] bg-sky-100' : 'text-slate-400 hover:text-[#3390EC] hover:bg-sky-50'
+                  }`}
+                  title="Video yuborish"
+                >
+                  <Video className="w-5 h-5" />
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className={`p-2 rounded-full transition ${
-                    selectedFile ? 'text-[#3390EC] bg-sky-100' : 'text-slate-400 hover:text-[#3390EC] hover:bg-sky-50'
+                    selectedFile && selectedFile.type !== 'video' ? 'text-[#3390EC] bg-sky-100' : 'text-slate-400 hover:text-[#3390EC] hover:bg-sky-50'
                   }`}
-                  title="Rasm, video yoki fayl biriktirish"
+                  title="Rasm yoki fayl biriktirish"
                 >
                   <Paperclip className="w-5 h-5" />
                 </button>
